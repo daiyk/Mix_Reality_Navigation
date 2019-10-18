@@ -467,6 +467,8 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
         CreateSessionForQuery,  ///< a session will be created to query for an anchor
         LookForAnchor,          ///< the session will run the query
         LookForNearbyAnchors,   ///< the session will run a query for nearby anchors
+        NavigationStart,        ///< the session will run for navigation
+        NavigationEnd,          ///< the navigation is end
         End,                            ///< the end of the demo
         Restart,                        ///< waiting to restart
     }
