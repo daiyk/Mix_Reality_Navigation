@@ -11,10 +11,13 @@
         android:layout_height="fill_parent"
         android:layout_gravity="top"/>
 
+
+
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="20dp">
+
         <Button
             android:id="@+id/backButton"
             android:layout_width="wrap_content"
@@ -52,5 +55,53 @@
             android:layout_alignParentBottom="true"
             android:text=""
             android:textAllCaps="false" />
+
+        <RadioGroup
+            android:id="@+id/radioGroup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true">
+
+            <RadioButton
+                android:id="@+id/radioButton1"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="checkButton"
+                android:text="Anchor1" />
+
+            <RadioButton
+                android:id="@+id/radioButton2"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="checkButton"
+                android:text="Anchor2" />
+
+            <RadioButton
+                android:id="@+id/radioButton3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:onClick="checkButton"
+                android:text="Anchor3" />
+        </RadioGroup>
+
+        <Button
+            android:id="@+id/navigate"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@+id/statusText"
+            android:layout_centerHorizontal="true"
+            android:layout_marginBottom="100dp"
+            android:text="Navigate" />
+
+        <TextView
+            android:id="@+id/anchor_Selected"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/radioGroup"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="25dp"
+            android:text="TextView" />
+
+
     </RelativeLayout>
 </merge>

@@ -8,19 +8,29 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
+import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.ar.core.Anchor;
+import com.google.ar.core.Camera;
 import com.google.ar.core.HitResult;
 import com.google.ar.core.Plane;
 import com.google.ar.sceneform.ArSceneView;
+import com.google.ar.sceneform.HitTestResult;
+import com.google.ar.sceneform.Node;
 import com.google.ar.sceneform.Scene;
+import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.Color;
 import com.google.ar.sceneform.rendering.Material;
 import com.google.ar.sceneform.rendering.MaterialFactory;
+import com.google.ar.sceneform.rendering.ViewRenderable;
 import com.google.ar.sceneform.ux.ArFragment;
 
+import com.google.ar.sceneform.ux.TransformableNode;
 import com.microsoft.azure.spatialanchors.AnchorLocateCriteria;
 import com.microsoft.azure.spatialanchors.AnchorLocatedEvent;
 import com.microsoft.azure.spatialanchors.CloudSpatialAnchor;
@@ -33,7 +43,10 @@ import com.microsoft.azure.spatialanchors.SessionUpdatedEvent;
 import java.text.DecimalFormat;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 
 public class AzureSpatialAnchorsActivity extends AppCompatActivity
 {
@@ -47,6 +60,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
     private final Object progressLock = new Object();
     private final Object renderLock = new Object();
     private int saveCount = 0;
+    private int anchorFound = 0;
 
     // Materials
     private static Material failedColor;
@@ -62,6 +76,12 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
     private ArSceneView sceneView;
     private TextView statusText;
 
+    private RadioGroup radioGroup;
+    private RadioButton radioButton;
+    private TextView textView;
+    private Button navigateButton;
+
+    private final HashMap<String,String> anchorNamesIdentifier = new HashMap<>();
     public void exitDemoClicked(View v) {
         synchronized (renderLock) {
             destroySession();
@@ -83,6 +103,11 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
         sceneView = arFragment.getArSceneView();
 
         Scene scene = sceneView.getScene();
+        String anchorCamera = "This is Camera";
+        Vector3 camRelPose = new Vector3(0.0f, 0.55f, -1.0f);
+        AnchorBoard cameraboard = new AnchorBoard(this, anchorCamera,0.5f,camRelPose);
+        scene.getCamera().addChild(cameraboard);
+
         scene.addOnUpdateListener(frameTime -> {
             if (cloudAnchorManager != null) {
                 // Pass frames to Spatial Anchors for processing.
@@ -95,6 +120,11 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
         scanProgressText = findViewById(R.id.scanProgressText);
         actionButton = findViewById(R.id.actionButton);
         actionButton.setOnClickListener((View v) -> advanceDemo());
+
+        radioGroup = findViewById(R.id.radioGroup);
+        textView = findViewById(R.id.anchor_Selected);
+        navigateButton = findViewById(R.id.navigate);
+        navigateButton.setOnClickListener((View v) -> onClick());
 
         MaterialFactory.makeOpaqueWithColor(this, new Color(android.graphics.Color.RED))
                 .thenAccept(material -> failedColor = material);
@@ -204,6 +234,9 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
                 startNewSession();
 
                 AnchorLocateCriteria criteria = new AnchorLocateCriteria();
+                //criteria.setBypassCache(true);
+                //不规定而是找到最近的anchor
+                //String EMPTY_STRING = "";
                 criteria.setIdentifiers(new String[]{anchorID});
 
                 // Cannot run more than one watcher concurrently
@@ -219,9 +252,8 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
                 break;
 
             case LookForNearbyAnchors:
-                if (anchorVisuals.isEmpty() || !anchorVisuals.containsKey(anchorID)) {
+                if (anchorVisuals.isEmpty() || !anchorVisuals.containsKey(anchorID)){
                     runOnUiThread(() -> statusText.setText("Cannot locate nearby. Previous anchor not yet located."));
-
                     break;
                 }
 
@@ -237,6 +269,12 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
                     actionButton.setVisibility(View.INVISIBLE);
                     statusText.setText("Locating...");
                 });
+
+                break;
+            case NavigationStart:
+                for (AnchorVisual visuals : anchorVisuals.values()){
+                    visuals.getAnchorNode().setOnTapListener(this::onTapListener);
+                }
 
                 break;
 
@@ -263,6 +301,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
         }
     }
 
+    //当saveCloudAnchor步骤成功时调用，重置createLocalAnchor或者开始新的query步骤
     private void anchorSaveSuccess(CloudSpatialAnchor result) {
         saveCount++;
 
@@ -270,6 +309,8 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
         Log.d("ASADemo:", "created anchor: " + anchorID);
 
         AnchorVisual visual = anchorVisuals.get("");
+
+        //储存完毕并且把anchor删除
         visual.setColor(savedColor);
         anchorVisuals.put(anchorID, visual);
         anchorVisuals.remove("");
@@ -359,8 +400,9 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
         });
     }
 
+    //当criteria定义的寻找目标全部完成时调用，不然一直调用onAnchorLocated（）
     private void onLocateAnchorsCompleted(LocateAnchorsCompletedEvent event) {
-        runOnUiThread(() -> statusText.setText("Anchor located!"));
+        runOnUiThread(() -> statusText.setText("Source Anchor located!"));
 
         if (!basicDemo && currentDemoStep == DemoStep.LookForAnchor) {
             runOnUiThread(() -> {
@@ -372,9 +414,10 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
             stopWatcher();
             runOnUiThread(() -> {
                 actionButton.setVisibility(View.VISIBLE);
-                actionButton.setText("Cleanup anchors");
+                //actionButton.setText("Cleanup anchors");
+                actionButton.setText("Start Navigation");
             });
-            currentDemoStep = DemoStep.End;
+            currentDemoStep = DemoStep.NavigationStart;
         }
     }
 
@@ -412,10 +455,27 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
         AnchorVisual foundVisual = new AnchorVisual(anchor.getLocalAnchor());
         foundVisual.setCloudAnchor(anchor);
         foundVisual.getAnchorNode().setParent(arFragment.getArSceneView().getScene());
+
+
         String cloudAnchorIdentifier = foundVisual.getCloudAnchor().getIdentifier();
+        statusText.setText(String.format("cloud Anchor Identifier: %s",cloudAnchorIdentifier));
         foundVisual.setColor(foundColor);
+
+        String anchorName = String.format("Anchor %d",++anchorFound);
+        float anchorscale = 0.5f;
+        Vector3 localPos = new Vector3(0.0f, anchorscale * 0.55f, 0.0f);
+        AnchorBoard anchorBoard = new AnchorBoard(this, anchorName,0.5f,localPos);
+        anchorBoard.setParent(foundVisual.getAnchorNode());
+
         foundVisual.render(arFragment);
+
+        //record anchors with its name as key
         anchorVisuals.put(cloudAnchorIdentifier, foundVisual);
+//        if(currentDemoStep == DemoStep.LookForAnchor) {
+//            anchorID = anchorName;
+//        }
+        anchorVisuals.put(cloudAnchorIdentifier, foundVisual);
+        anchorNamesIdentifier.put(anchorName,cloudAnchorIdentifier);
     }
 
     private void setupLocalCloudAnchor(AnchorVisual visual) {
@@ -439,6 +499,9 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
             scanProgressText.setVisibility(View.GONE);
             statusText.setText("Tap a surface to create an anchor");
             actionButton.setVisibility(View.INVISIBLE);
+            navigateButton.setVisibility(View.INVISIBLE);
+            radioGroup.setVisibility(View.INVISIBLE);
+            textView.setVisibility(View.INVISIBLE);
         });
         currentDemoStep = DemoStep.CreateLocalAnchor;
     }
@@ -459,6 +522,69 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
         }
     }
 
+    private void onClick(){
+        if (currentDemoStep == DemoStep.NavigationStart){
+            int radioId = radioGroup.getCheckedRadioButtonId();
+            radioButton = findViewById(radioId);
+            //textView.setText("Navigate to "+ radioButton.getText());
+
+            runOnUiThread(() -> {
+                //textView.setText((CharSequence) dictionary.keySet().toArray()[0]);
+                statusText.setText(radioButton.getText());
+            });
+            //textView.setText(Integer.toString(radioId));
+            //Integer.toString(radioId)
+            //AnchorVisual visual = dictionary.get(radioButton.getText());
+            //AnchorNode an = visual.getAnchorNode();
+
+        }
+    /*
+    if (sceneRenderable!=null){
+        TransformableNode scene = new TransformableNode(arFragment.getTransformationSystem());
+
+        scene.getScaleController().setMaxScale(0.2f);
+        scene.getScaleController().setMinScale(0.05f);
+        scene.setLocalRotation(Quaternion.axisAngle(new Vector3(1f, 0, 0), 00f));
+
+        scene.setParent(visual.getAnchorNode());
+        scene.setRenderable(sceneRenderable);
+        scene.select();
+    }
+    */
+
+    }
+
+    private void onTapListener(HitTestResult hitTestResult, MotionEvent motionEvent) {
+        //runOnUiThread(() -> {
+        //    statusText.setText("Tap a surface to create next anchor");
+        //actionButton.setVisibility(View.INVISIBLE);
+        //});
+        if (currentDemoStep == DemoStep.NavigationStart) {
+            runOnUiThread(() -> {
+                radioGroup.setVisibility(View.VISIBLE);
+                textView.setVisibility(View.VISIBLE);
+                navigateButton.setVisibility(View.VISIBLE);
+                textView.setText("");
+            });
+        }
+
+
+        //if (sceneRenderable != null) {
+        //Anchor anchor = hitResult.createAnchor();
+
+        // Create the Anchor.
+        //AnchorNode anchorNode = new AnchorNode(anchor);
+        //anchorNode.setParent(arFragment.getArSceneView().getScene());
+
+        // Create the transformable node and add it to the anchor.
+        //}
+    }
+
+    public void checkButton(View v){
+        int radioId = radioGroup.getCheckedRadioButtonId();
+        radioButton = findViewById(radioId);
+        Toast.makeText(this,"Select" + radioButton.getText(), Toast.LENGTH_SHORT).show();
+    }
     enum DemoStep {
         Start,                          ///< the start of the demo
         CreateLocalAnchor,      ///< the session will create a local anchor

@@ -1,4 +1,5 @@
 apply plugin: 'com.android.application'
+apply plugin: 'com.google.ar.sceneform.plugin'
 
 def azureSpatialAnchorsSdkVersion = '1.3.2'
 
@@ -22,6 +23,9 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+        customDebugType {
+            debuggable true
         }
     }
 
@@ -52,3 +56,9 @@ dependencies {
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
 }
+
+apply plugin: 'com.google.ar.sceneform.plugin'
+sceneform.asset('sampledata/scene.gltf',
+        'default',
+        'sampledata/scene.sfa',
+        'src/main/assets/scene')
