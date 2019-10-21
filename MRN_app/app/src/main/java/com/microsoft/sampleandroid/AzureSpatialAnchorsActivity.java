@@ -44,6 +44,9 @@ import java.text.DecimalFormat;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -75,13 +78,15 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
     private TextView scanProgressText;
     private ArSceneView sceneView;
     private TextView statusText;
+    private AnchorArrow arrow;
+    private String targetName = null;
 
     private RadioGroup radioGroup;
     private RadioButton radioButton;
     private TextView textView;
     private Button navigateButton;
 
-    private final HashMap<String,String> anchorNamesIdentifier = new HashMap<>();
+    private final LinkedHashMap<String,String> anchorNamesIdentifier = new LinkedHashMap<>();
     public void exitDemoClicked(View v) {
         synchronized (renderLock) {
             destroySession();
@@ -104,10 +109,12 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
 
         Scene scene = sceneView.getScene();
         String anchorCamera = "This is Camera";
-        Vector3 camRelPose = new Vector3(0.0f, 0.55f, -1.0f);
-        AnchorBoard cameraboard = new AnchorBoard(this, anchorCamera,0.5f,camRelPose);
-        scene.getCamera().addChild(cameraboard);
+        Vector3 camRelPose = new Vector3(0.0f, 0.2f, -1.5f);
 
+        //set arrow
+        arrow = new AnchorArrow(this,camRelPose,arFragment.getTransformationSystem());
+        scene.getCamera().addChild(arrow);
+        arrow.setEnabled(false);
         scene.addOnUpdateListener(frameTime -> {
             if (cloudAnchorManager != null) {
                 // Pass frames to Spatial Anchors for processing.
@@ -275,9 +282,32 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
                 for (AnchorVisual visuals : anchorVisuals.values()){
                     visuals.getAnchorNode().setOnTapListener(this::onTapListener);
                 }
-
                 break;
-
+            case NavigationEnd:
+                if(targetName == null)
+                {
+                    Toast.makeText(this, "\"ERROR: No target Selected!\"", Toast.LENGTH_LONG)
+                            .show();
+                    finish();
+                }
+                AnchorVisual targetAnchor = anchorVisuals.get(anchorNamesIdentifier.get(targetName));
+                targetAnchor.render(arFragment);
+                arrow.updateTargetAnchor(targetAnchor.getAnchorNode());
+                arrow.setEnabled(true);
+                //end navigation button
+                runOnUiThread(() -> {
+                    actionButton.setText("End Navigation");
+                    statusText.setText("");
+                    backButton.setVisibility(View.VISIBLE);
+                });
+                currentDemoStep =DemoStep.End;
+                for (AnchorVisual toDeleteVisual : anchorVisuals.values()) {
+                    if(toDeleteVisual != targetAnchor) {
+                        cloudAnchorManager.deleteAnchorAsync(toDeleteVisual.getCloudAnchor());
+                        toDeleteVisual.destroy();
+                    }
+                }
+                break;
             case End:
                 for (AnchorVisual toDeleteVisual : anchorVisuals.values()) {
                     cloudAnchorManager.deleteAnchorAsync(toDeleteVisual.getCloudAnchor());
@@ -458,11 +488,12 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
 
 
         String cloudAnchorIdentifier = foundVisual.getCloudAnchor().getIdentifier();
-        statusText.setText(String.format("cloud Anchor Identifier: %s",cloudAnchorIdentifier));
+        //statusText.setText(String.format("cloud Anchor Identifier: %s",cloudAnchorIdentifier));
         foundVisual.setColor(foundColor);
 
         String anchorName = String.format("Anchor %d",++anchorFound);
         float anchorscale = 0.5f;
+        anchorNamesIdentifier.put(anchorName,cloudAnchorIdentifier);
         Vector3 localPos = new Vector3(0.0f, anchorscale * 0.55f, 0.0f);
         AnchorBoard anchorBoard = new AnchorBoard(this, anchorName,0.5f,localPos);
         anchorBoard.setParent(foundVisual.getAnchorNode());
@@ -470,12 +501,11 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
         foundVisual.render(arFragment);
 
         //record anchors with its name as key
-        anchorVisuals.put(cloudAnchorIdentifier, foundVisual);
 //        if(currentDemoStep == DemoStep.LookForAnchor) {
 //            anchorID = anchorName;
 //        }
         anchorVisuals.put(cloudAnchorIdentifier, foundVisual);
-        anchorNamesIdentifier.put(anchorName,cloudAnchorIdentifier);
+
     }
 
     private void setupLocalCloudAnchor(AnchorVisual visual) {
@@ -526,31 +556,16 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
         if (currentDemoStep == DemoStep.NavigationStart){
             int radioId = radioGroup.getCheckedRadioButtonId();
             radioButton = findViewById(radioId);
+            targetName = (String)radioButton.getText();
             //textView.setText("Navigate to "+ radioButton.getText());
 
             runOnUiThread(() -> {
                 //textView.setText((CharSequence) dictionary.keySet().toArray()[0]);
                 statusText.setText(radioButton.getText());
             });
-            //textView.setText(Integer.toString(radioId));
-            //Integer.toString(radioId)
-            //AnchorVisual visual = dictionary.get(radioButton.getText());
-            //AnchorNode an = visual.getAnchorNode();
-
+            currentDemoStep = DemoStep.NavigationEnd;
+            advanceDemo();
         }
-    /*
-    if (sceneRenderable!=null){
-        TransformableNode scene = new TransformableNode(arFragment.getTransformationSystem());
-
-        scene.getScaleController().setMaxScale(0.2f);
-        scene.getScaleController().setMinScale(0.05f);
-        scene.setLocalRotation(Quaternion.axisAngle(new Vector3(1f, 0, 0), 00f));
-
-        scene.setParent(visual.getAnchorNode());
-        scene.setRenderable(sceneRenderable);
-        scene.select();
-    }
-    */
 
     }
 
@@ -565,8 +580,18 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
                 textView.setVisibility(View.VISIBLE);
                 navigateButton.setVisibility(View.VISIBLE);
                 textView.setText("");
+
             });
+            Iterator AnchorIterator = anchorNamesIdentifier.entrySet().iterator();
+            int count = radioGroup.getChildCount();
+            int i = 0;
+            while(AnchorIterator.hasNext()){
+                Map.Entry mapElement = (Map.Entry)AnchorIterator.next();
+                RadioButton b = (RadioButton)radioGroup.getChildAt(i++);
+                b.setText((CharSequence) mapElement.getKey());
+            };
         }
+
 
 
         //if (sceneRenderable != null) {

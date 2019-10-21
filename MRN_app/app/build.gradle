@@ -58,7 +58,10 @@ dependencies {
 }
 
 apply plugin: 'com.google.ar.sceneform.plugin'
+
+
 sceneform.asset('sampledata/scene.gltf',
         'default',
         'sampledata/scene.sfa',
         'src/main/assets/scene')
+
