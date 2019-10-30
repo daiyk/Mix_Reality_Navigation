@@ -623,4 +623,9 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
         End,                            ///< the end of the demo
         Restart,                        ///< waiting to restart
     }
+    enum NodeType {             ///< classify nodes into 3 types
+        Major,                  ///< node that represents important and meaningful location
+        Minor,                  ///< node that used for tracking and accuracy improve.
+        Cross,                  ///< node where new graph branch is generated
+    }
 }
