@@ -1,5 +1,6 @@
 package com.microsoft.sampleandroid;
 
+import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Environment;
@@ -28,6 +29,8 @@ import javax.xml.transform.OutputKeys;
 import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
+import org.w3c.dom.NodeList;
+import org.w3c.dom.Node;
 
 
 public final class FileManager {
@@ -72,7 +75,7 @@ public final class FileManager {
         try {
             //extract map information and save them separate for xml write
             ArrayList<ArrayList<Integer>> adj_list = map.getAdjList();
-            ArrayList<Node> nodeList = map.getNodeList();
+            ArrayList<com.microsoft.sampleandroid.Node> nodeList = map.getNodeList();
             Map<String,Integer> nodeIdPair = map.getNodeIdPair();
 
             //build xml document class
@@ -182,41 +185,78 @@ public final class FileManager {
 
 
     //Load xml file to xml
-<<<<<<< HEAD
-//    public AnchorMap loadMap(){
-//        Uri selectedUri = Uri.parse(Environment.getExternalStorageDirectory() + "/myFolder/");
-//        Intent intent = new Intent(Intent.ACTION_VIEW);
-//        intent.setDataAndType(selectedUri, "resource/folder");
-//
-//        if (intent.resolveActivityInfo(getPackageManager(), 0) != null)
-//        {
-//            startActivity(intent);
-//        }
-//        else
-//        {
-//            // if you reach this place, it means there is no any file
-//            // explorer app installed on your device
-//        }
-//
-//    }
-=======
-    public AnchorMap loadMap(){
-        Uri selectedUri = Uri.parse(Environment.getExternalStorageDirectory() + "/myFolder/");
-        Intent intent = new Intent(Intent.ACTION_VIEW);
-        intent.setDataAndType(selectedUri, "resource/folder");
+    public AnchorMap loadMap(String xmlPath)
+    {
+        AnchorMap map = new AnchorMap();
+        try{
+            File xmlfile = new File(xmlPath);
+            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+            Document doc = dBuilder.parse(xmlfile);
 
-        if (intent.resolveActivityInfo(getPackageManager(), 0) != null)
-        {
-            startActivity(intent);
-        }
-        else
-        {
-            // if you reach this place, it means there is no any file
-            // explorer app installed on your device
-        }
+            //get root element
+            doc.getDocumentElement().normalize();
+            Element root = doc.getDocumentElement();
 
+            //get Nodes element
+            Node nodes = root.getElementsByTagName("Nodes").item(0);
+
+
+            if(nodes.getNodeType() == Node.ELEMENT_NODE)
+            {
+                Element eNodeList = (Element)nodes;
+                NodeList nodeList = eNodeList.getElementsByTagName("node");
+
+                for(int item = 0;item<nodeList.getLength();item++)
+                {
+                    Node node = nodeList.item(item);
+                    if(node.getNodeType()==Node.ELEMENT_NODE)
+                    {
+                        Element eNode = (Element)node;
+                        map.addNode(eNode.getAttribute("anchorName"),eNode.getAttribute("anchorID"), MapBuildingActivity.NodeType.valueOf(eNode.getAttribute("type")));
+                    }
+                }
+            }
+
+            //get Graph elements
+            Node graph = root.getElementsByTagName("Graph").item(0);
+
+            if(graph.getNodeType() == Node.ELEMENT_NODE)
+            {
+                Element eAdjList = (Element)graph;
+                NodeList adjList = eAdjList.getElementsByTagName("node");
+                for(int item = 0; item<adjList.getLength();item++)
+                {
+                    Node node = adjList.item(item);
+                    if(node.getNodeType()==Node.ELEMENT_NODE)
+                    {
+                        Element eNeighbor = (Element)node;
+                        int id = Integer.valueOf(eNeighbor.getAttribute("id"));
+
+                        //loop over adjacency list
+                        NodeList neighbors = eNeighbor.getElementsByTagName("neighbor");
+                        for(int j = 0; j<neighbors.getLength();j++)
+                        {
+                            Node neighbor = neighbors.item(j);
+                            if(neighbor.getNodeType()==Element.ELEMENT_NODE)
+                            {
+                                int neighborID = Integer.valueOf(neighbor.getTextContent());
+
+                                //add edge
+                                map.addEdge(map.getNodeList().get(id).AnchorName, map.getNodeList().get(neighborID).AnchorName);
+                            }
+                        }
+                    }
+                }
+
+            }
+
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return map;
     }
->>>>>>> 85fb5808b9fd9f5000eb0f6261a85bba7462c041
 
 
 //    public void writeNewPose(long currTime, float[] camTrans, float[] camRot){
@@ -261,23 +301,6 @@ public final class FileManager {
     /*
      * Checks if external storage is available for read and write
      */
-<<<<<<< HEAD
-    private boolean isExternalStorageWritable(){
-
-        String state = Environment.getExternalStorageState();
-        return Environment.MEDIA_MOUNTED.equals(state);
-    }
-
-    /* Checks if external storage is available to at least read */
-    public boolean isExternalStorageReadable() {
-        String state = Environment.getExternalStorageState();
-        if (Environment.MEDIA_MOUNTED.equals(state) ||
-                Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
-            return true;
-        }
-        return false;
-    }
-=======
      private boolean isExternalStorageWritable(){
 
          String state = Environment.getExternalStorageState();
@@ -293,6 +316,5 @@ public final class FileManager {
          }
          return false;
      }
->>>>>>> 85fb5808b9fd9f5000eb0f6261a85bba7462c041
 
 }

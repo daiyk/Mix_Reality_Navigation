@@ -1,6 +1,7 @@
 package com.microsoft.sampleandroid;
 
 import android.content.Context;
+import android.util.Log;
 import android.widget.Toast;
 
 
@@ -12,14 +13,14 @@ import java.util.Map;
 
 public class AnchorMap {
     static int NodesID = 0;
+    static String TAG = "AnchorMap";
     private HashMap<String,Integer> mapping = new HashMap<>();
     private ArrayList<ArrayList<Integer>> adjacencyList = new ArrayList<ArrayList<Integer>>();
     private ArrayList<Node> NodeList = new ArrayList<>();
-    private Context currcontext;
 
     //CONSTRUCTOR
-    public AnchorMap(Context context){
-        currcontext = context;
+    public AnchorMap(){
+
     }
     //METHOD:ADD NODE
     //METHOD: return anchorNode List
@@ -46,8 +47,8 @@ public class AnchorMap {
     //Type: Currently not used, for classifying anchors
     public boolean addNode(String AnchorName,
                            String AnchorID,
-                           AzureSpatialAnchorsActivity.NodeType Type
-    )
+                           MapBuildingActivity.NodeType Type
+    ) throws UnsupportedOperationException
     {
         if(!mapping.containsKey(AnchorName))
         {
@@ -69,28 +70,30 @@ public class AnchorMap {
         }
         else
         {
-            Toast.makeText(currcontext, "Error: Try to add already existed anchor to graph!", Toast.LENGTH_SHORT).show();
-            return false;
+            Log.e(TAG,"Error: Try to add already existed anchor to graph!");
+            throw new UnsupportedOperationException();
         }
     }
 
     //METHOD: add edge between two anchors
     //anchor1: user-defined anchorname 1
     //anchor2: user-defined anchorname 2
-    public boolean addEdge(String anchor1, String anchor2)
+    public boolean addEdge(String anchor1, String anchor2) throws UnsupportedOperationException
     {
         //search on the hashmap for corresponding node
         if(!mapping.containsKey(anchor1)||!mapping.containsKey(anchor2))
         {
-            Toast.makeText(currcontext, "Error: Invalid anchor name!", Toast.LENGTH_SHORT).show();
-            return false;
+            Log.e(TAG, "Error: AnchorMap.addEdge(): Input anchors not existed!");
+            throw new UnsupportedOperationException();
         }
         Integer Idx1 = mapping.get(anchor1);
         Integer Idx2 = mapping.get(anchor2);
 
         //add edge to the adjacency list
-        adjacencyList.get(Idx1).add(Idx2);
-        adjacencyList.get(Idx2).add(Idx1);
+        if(!adjacencyList.get(Idx1).contains(Idx2))
+            adjacencyList.get(Idx1).add(Idx2);
+        if(!adjacencyList.get(Idx2).contains(Idx1))
+            adjacencyList.get(Idx2).add(Idx1);
 
         return true;
     }
@@ -99,14 +102,14 @@ public class AnchorMap {
     //start: start anchor name
     //end: end anchor name
     //mapQueue: queue to store return path. (!!! You have to define a empty ArrayList<String> and supply to it !!!)
-    public boolean searchSP(String start, String end, ArrayList<String> mapQueue)
+    public boolean searchSP(String start, String end, ArrayList<String> mapQueue) throws UnsupportedOperationException
     //mapQueue: node list that contains the final path
     //start, end: names of start node and end node
     {
         if(!mapping.containsKey(start)||!mapping.containsKey(end))
         {
-            Toast.makeText(currcontext, "Error: The request target doesn't existed!", Toast.LENGTH_SHORT).show();
-            return false;
+            Log.e(TAG,"Error: The request target doesn't existed!");
+            throw new UnsupportedOperationException();
         }
         //find the first and end node
         int startID = mapping.get(start);
@@ -171,7 +174,7 @@ public class AnchorMap {
     {
         if(!mapping.containsKey(anchorName))
         {
-            Toast.makeText(currcontext, "Error: AnchorMap.getNode: Try to get non-existed anchor!", Toast.LENGTH_SHORT).show();
+            Log.e(TAG,"Error: request node doesn't existed!");
             return new Node();
         }
         Integer nodeID = mapping.get(anchorName);
@@ -185,17 +188,13 @@ class Node{
         this.AnchorName = "Undefined";
         this.AnchorID = "Undefined";
     }
-    public Node(String name, String ID, AzureSpatialAnchorsActivity.NodeType type){
+    public Node(String name, String ID, MapBuildingActivity.NodeType type){
         this.AnchorName = name;
         this.AnchorID = ID;
         this.Type = type;
     }
     public String AnchorName;
     public String AnchorID;
-    public AzureSpatialAnchorsActivity.NodeType Type;
-<<<<<<< HEAD
-}
-=======
+    public MapBuildingActivity.NodeType Type;
 }
 
->>>>>>> 85fb5808b9fd9f5000eb0f6261a85bba7462c041

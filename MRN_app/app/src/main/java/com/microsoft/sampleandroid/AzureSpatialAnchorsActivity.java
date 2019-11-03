@@ -2,7 +2,15 @@
 // Licensed under the MIT license.
 package com.microsoft.sampleandroid;
 
+import android.Manifest;
+import android.app.Activity;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.net.Uri;
 import android.os.Bundle;
+import android.os.Environment;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -36,6 +44,7 @@ import com.microsoft.azure.spatialanchors.LocateAnchorsCompletedEvent;
 import com.microsoft.azure.spatialanchors.NearAnchorCriteria;
 import com.microsoft.azure.spatialanchors.SessionUpdatedEvent;
 
+import java.io.File;
 import java.text.DecimalFormat;
 import java.util.Calendar;
 import java.util.Date;
@@ -46,6 +55,8 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class AzureSpatialAnchorsActivity extends AppCompatActivity
 {
+    private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 101;
+    private static final int READ_REQUEST_CODE = 102;
     private String anchorID;
     private final ConcurrentHashMap<String, AnchorVisual> anchorVisuals = new ConcurrentHashMap<>();
     private boolean basicDemo = true;
@@ -83,6 +94,8 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
     private boolean update_anchor;
     private AnchorNode targetAnchor;
     private AnchorNode final_targetAnchor;
+
+    private AnchorMap Map;
 
     private final LinkedHashMap<String,String> anchorNamesIdentifier = new LinkedHashMap<>();
     public void exitDemoClicked(View v) {
@@ -289,6 +302,37 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
                     statusText.setText("Locating...");
                 });
 
+                break;
+
+
+            case LoadMap:
+
+                if (ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.READ_EXTERNAL_STORAGE)
+                        != PackageManager.PERMISSION_GRANTED) {
+
+                    // Permission is not granted
+                    // Should we show an explanation?
+
+                    // No explanation needed; request the permission
+                    ActivityCompat.requestPermissions(this,
+                            new String[]{Manifest.permission.READ_EXTERNAL_STORAGE},
+                            MY_PERMISSIONS_REQUEST_READ_CONTACTS);
+
+                    // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                    // app-defined int constant. The callback method gets the
+                    // result of the request.
+
+                } else {
+
+                    Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                    Uri uri = Uri.parse(Environment.getExternalStorageDirectory().getAbsolutePath()
+                            +  File.separator + "MixRealityNavi" + File.separator + "Maps" + File.separator);
+                    intent.setDataAndType(uri, "*/*");
+                    startActivityForResult(intent, READ_REQUEST_CODE);
+                    int kk = 0;
+
+                }
                 break;
             case NavigationStart:
                 for (AnchorVisual visuals : anchorVisuals.values()){
@@ -565,12 +609,15 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
         runOnUiThread(() -> {
             scanProgressText.setVisibility(View.GONE);
             statusText.setText("Tap a surface to create an anchor");
-            actionButton.setVisibility(View.INVISIBLE);
+            //actionButton.setVisibility(View.INVISIBLE);
+            actionButton.setVisibility(View.VISIBLE);
+
             navigateButton.setVisibility(View.INVISIBLE);
             radioGroup.setVisibility(View.INVISIBLE);
             textView.setVisibility(View.INVISIBLE);
         });
-        currentDemoStep = DemoStep.CreateLocalAnchor;
+        currentDemoStep = DemoStep.LoadMap;
+        //currentDemoStep = DemoStep.CreateLocalAnchor;
     }
 
     private void startNewSession() {
@@ -632,6 +679,61 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
         radioButton = findViewById(radioId);
         Toast.makeText(this,"Select" + radioButton.getText(), Toast.LENGTH_SHORT).show();
     }
+
+    public void onRequestPermissionsResult(int requestCode,
+                                           String[] permissions, int[] grantResults) {
+        switch (requestCode) {
+            case MY_PERMISSIONS_REQUEST_READ_CONTACTS: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                    advanceDemo();
+                    // permission was granted, yay! Do the
+                    // contacts-related task you need to do.
+                } else {
+                    Toast.makeText(this,"No Permission", Toast.LENGTH_LONG).show();
+                    // permission denied, boo! Disable the
+                    // functionality that depends on this permission.
+                }
+                return;
+            }
+
+            // other 'case' lines to check for other
+            // permissions this app might request.
+        }
+    }
+    public void onActivityResult(int requestCode, int resultCode,
+                                 Intent resultData) {
+
+        // The ACTION_OPEN_DOCUMENT intent was sent with the request code
+        // READ_REQUEST_CODE. If the request code seen here doesn't match, it's the
+        // response to some other intent, and the code below shouldn't run at all.
+
+        if (requestCode == READ_REQUEST_CODE && resultCode == Activity.RESULT_OK) {
+            // The document selected by the user won't be returned in the intent.
+            // Instead, a URI to that document will be contained in the return intent
+            // provided to this method as a parameter.
+            // Pull that URI using resultData.getData().
+            Uri uri = null;
+            if (resultData != null) {
+                uri = resultData.getData();
+                File file_uri = new File(uri.getPath());
+                final String[] split = file_uri.getPath().split(":");
+                String filePath = split[1];
+                FileManager file = new FileManager();
+                Map = file.loadMap(filePath);
+                Toast.makeText(this, "load map",Toast.LENGTH_LONG).show();
+                // Permission has already been granted
+                currentDemoStep = DemoStep.NavigationStart;
+                actionButton.setVisibility(View.VISIBLE);
+                statusText.setText("Map Loaded. Start Navigation");
+
+                file.saveMap("testLoad",Map);
+            }
+        }
+    }
+
     enum DemoStep {
         Start,                          ///< the start of the demo
         CreateLocalAnchor,      ///< the session will create a local anchor
@@ -640,6 +742,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
         CreateSessionForQuery,  ///< a session will be created to query for an anchor
         LookForAnchor,          ///< the session will run the query
         LookForNearbyAnchors,   ///< the session will run a query for nearby anchors
+        LoadMap,                ///< load map
         NavigationStart,        ///< the session will run for navigation
         NavigationEnd,          ///< the navigation is end
         End,                            ///< the end of the demo

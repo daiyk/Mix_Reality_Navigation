@@ -2,7 +2,11 @@
 // Licensed under the MIT license.
 package com.microsoft.sampleandroid;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.MotionEvent;
@@ -41,11 +45,13 @@ import com.microsoft.azure.spatialanchors.NearAnchorCriteria;
 import com.microsoft.azure.spatialanchors.SessionUpdatedEvent;
 
 import java.text.DecimalFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
@@ -53,6 +59,7 @@ import java.util.concurrent.ExecutionException;
 
 public class MapBuildingActivity extends AppCompatActivity
 {
+    private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 100;
     private String anchorID;
     private final ConcurrentHashMap<String, AnchorVisual> anchorVisuals = new ConcurrentHashMap<>();
     private boolean basicDemo = true;
@@ -84,6 +91,8 @@ public class MapBuildingActivity extends AppCompatActivity
     private TextView statusText;
 
     private Button finishButton;
+    private AnchorMap Map;
+    private List<String> AnchorNames = new ArrayList<String>();
 
     private String targetName = null;
 
@@ -126,6 +135,9 @@ public class MapBuildingActivity extends AppCompatActivity
 
         finishButton = findViewById(R.id.finishButton);
         finishButton.setOnClickListener((View v) -> onClick());
+
+        Map = new AnchorMap();
+
 
 
         MaterialFactory.makeOpaqueWithColor(this, new Color(android.graphics.Color.RED))
@@ -284,7 +296,33 @@ public class MapBuildingActivity extends AppCompatActivity
                 break;
 
             case SaveMap:
-                currentDemoStep = DemoStep.End;
+                if (ContextCompat.checkSelfPermission(this,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                        != PackageManager.PERMISSION_GRANTED) {
+
+                    // Permission is not granted
+                    // Should we show an explanation?
+
+                        // No explanation needed; request the permission
+                    ActivityCompat.requestPermissions(this,
+                            new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                            MY_PERMISSIONS_REQUEST_READ_CONTACTS);
+
+                        // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                        // app-defined int constant. The callback method gets the
+                        // result of the request.
+
+                } else {
+                    FileManager file = new FileManager();
+                    file.saveMap("test",Map);
+                    currentDemoStep = DemoStep.End;
+                    Toast.makeText(this, "save map",Toast.LENGTH_LONG).show();
+                    // Permission has already been granted
+                }
+                break;
+
+
+
 
             case End:
                 for (AnchorVisual toDeleteVisual : anchorVisuals.values()) {
@@ -317,6 +355,9 @@ public class MapBuildingActivity extends AppCompatActivity
         Log.d("ASADemo:", "created anchor: " + anchorID);
 
         AnchorVisual visual = anchorVisuals.get("");
+
+        AnchorNames.add(String.format("Anchor %d", saveCount - 1));
+        addToMap(AnchorNames ,anchorID, NodeType.Major);
 
         //储存完毕并且把anchor删除
         visual.setColor(savedColor);
@@ -527,6 +568,39 @@ public class MapBuildingActivity extends AppCompatActivity
         advanceDemo();
     }
 
+    private void addToMap(List AnchorNames, String AnchorID, NodeType AnchorType){
+        if (AnchorNames.size() == 1){
+            Map.addNode((String) AnchorNames.get(AnchorNames.size()-1), AnchorID, AnchorType);
+        }
+        else{
+            Map.addNode((String) AnchorNames.get(AnchorNames.size()-1), AnchorID, AnchorType);
+            Map.addEdge((String) AnchorNames.get(AnchorNames.size()-1),(String) AnchorNames.get(AnchorNames.size()-2));
+        }
+    }
+
+    public void onRequestPermissionsResult(int requestCode,
+                                           String[] permissions, int[] grantResults) {
+        switch (requestCode) {
+            case MY_PERMISSIONS_REQUEST_READ_CONTACTS: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                    advanceDemo();
+                    // permission was granted, yay! Do the
+                    // contacts-related task you need to do.
+                } else {
+                    Toast.makeText(this,"No Permission", Toast.LENGTH_LONG).show();
+                    // permission denied, boo! Disable the
+                    // functionality that depends on this permission.
+                }
+                return;
+            }
+
+            // other 'case' lines to check for other
+            // permissions this app might request.
+        }
+    }
 
     enum DemoStep {
         Start,                          ///< the start of the demo
