@@ -1,18 +1,21 @@
 package com.microsoft.sampleandroid;
 
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Stack;
 
-public class Map {
+public class Graph {
     private String firstVertex;
 
     private HashMap<String, LinkedList<String>> adjacencyMap = new HashMap<>();
+    private Map<String, List<String>> adj = new HashMap<>();
+    private BreadthFirstSearch bfs;
 
-    private BFS bfs;
-
-    public Map(BFS bfs){
+    public Graph(BreadthFirstSearch bfs){
         this.bfs= bfs;
     }
 
@@ -25,12 +28,33 @@ public class Map {
         stack.add(vertex);
 
         Map<String, String> path = bfs.getPath();
-        for (String location = path.get(vertex) ; false == location.equals(firstVertax) ; location = path.get(location)) {
+        for (String location = path.get(vertex) ; false == location.equals(firstVertex) ; location = path.get(location)) {
             stack.push(location);
         }
         stack.push(firstVertex);
 
         return stack;
+    }
+
+
+    public void addEdge(String fromVertex, String toVertex) {
+        if (firstVertex == null) {
+            firstVertex = fromVertex;
+        }
+
+        adj.get(fromVertex).add(toVertex);
+        adj.get(toVertex).add(fromVertex);
+    }
+
+    /**
+     * 添加一个顶点
+     */
+    public void addVertex(String vertex) {
+        adj.put(vertex, new ArrayList<>());
+    }
+
+    public Map<String, List<String>> getAdj() {
+        return adj;
     }
 }
 

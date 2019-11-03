@@ -182,6 +182,7 @@ public final class FileManager {
 
 
     //Load xml file to xml
+<<<<<<< HEAD
 //    public AnchorMap loadMap(){
 //        Uri selectedUri = Uri.parse(Environment.getExternalStorageDirectory() + "/myFolder/");
 //        Intent intent = new Intent(Intent.ACTION_VIEW);
@@ -198,6 +199,24 @@ public final class FileManager {
 //        }
 //
 //    }
+=======
+    public AnchorMap loadMap(){
+        Uri selectedUri = Uri.parse(Environment.getExternalStorageDirectory() + "/myFolder/");
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setDataAndType(selectedUri, "resource/folder");
+
+        if (intent.resolveActivityInfo(getPackageManager(), 0) != null)
+        {
+            startActivity(intent);
+        }
+        else
+        {
+            // if you reach this place, it means there is no any file
+            // explorer app installed on your device
+        }
+
+    }
+>>>>>>> 85fb5808b9fd9f5000eb0f6261a85bba7462c041
 
 
 //    public void writeNewPose(long currTime, float[] camTrans, float[] camRot){
@@ -242,6 +261,7 @@ public final class FileManager {
     /*
      * Checks if external storage is available for read and write
      */
+<<<<<<< HEAD
     private boolean isExternalStorageWritable(){
 
         String state = Environment.getExternalStorageState();
@@ -257,5 +277,22 @@ public final class FileManager {
         }
         return false;
     }
+=======
+     private boolean isExternalStorageWritable(){
+
+         String state = Environment.getExternalStorageState();
+         return Environment.MEDIA_MOUNTED.equals(state);
+     }
+
+     /* Checks if external storage is available to at least read */
+     public boolean isExternalStorageReadable() {
+         String state = Environment.getExternalStorageState();
+         if (Environment.MEDIA_MOUNTED.equals(state) ||
+                 Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+             return true;
+         }
+         return false;
+     }
+>>>>>>> 85fb5808b9fd9f5000eb0f6261a85bba7462c041
 
 }

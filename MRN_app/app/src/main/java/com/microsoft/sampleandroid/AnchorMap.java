@@ -193,4 +193,9 @@ class Node{
     public String AnchorName;
     public String AnchorID;
     public AzureSpatialAnchorsActivity.NodeType Type;
+<<<<<<< HEAD
 }
+=======
+}
+
+>>>>>>> 85fb5808b9fd9f5000eb0f6261a85bba7462c041
