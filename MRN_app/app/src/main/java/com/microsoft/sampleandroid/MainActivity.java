@@ -17,8 +17,8 @@ public class MainActivity extends Activity {
 
     public void onBasicDemoClick(View v)
     {
-        Intent intent = new Intent(this, AzureSpatialAnchorsActivity.class);
-        intent.putExtra("BasicDemo", true);
+        Intent intent = new Intent(this, MapBuildingActivity.class);
+        intent.putExtra("BasicDemo", false);
         startActivity(intent);
     }
 
