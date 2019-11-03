@@ -8,15 +8,12 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.ar.core.Anchor;
-import com.google.ar.core.Camera;
 import com.google.ar.core.HitResult;
 import com.google.ar.core.Plane;
 import com.google.ar.sceneform.ArSceneView;
@@ -27,10 +24,8 @@ import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.Color;
 import com.google.ar.sceneform.rendering.Material;
 import com.google.ar.sceneform.rendering.MaterialFactory;
-import com.google.ar.sceneform.rendering.ViewRenderable;
 import com.google.ar.sceneform.ux.ArFragment;
 
-import com.google.ar.sceneform.ux.TransformableNode;
 import com.microsoft.azure.spatialanchors.AnchorLocateCriteria;
 import com.microsoft.azure.spatialanchors.AnchorLocatedEvent;
 import com.microsoft.azure.spatialanchors.CloudSpatialAnchor;
@@ -43,13 +38,10 @@ import com.microsoft.azure.spatialanchors.SessionUpdatedEvent;
 import java.text.DecimalFormat;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 
 public class AzureSpatialAnchorsActivity extends AppCompatActivity
 {
@@ -178,7 +170,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
             startDemo();
         }
     }
-
     private void advanceDemo() {
         switch (currentDemoStep) {
             case SaveCloudAnchor:

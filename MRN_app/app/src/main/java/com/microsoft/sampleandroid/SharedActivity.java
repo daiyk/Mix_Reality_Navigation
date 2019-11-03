@@ -43,7 +43,7 @@ public class SharedActivity extends AppCompatActivity
     }
 
     // Set this string to the URL created when publishing your Shared anchor service in the Sharing sample.
-    private static final String SharingAnchorsServiceUrl = "";
+    private static final String SharingAnchorsServiceUrl = "https://mixnavigation.azurewebsites.net";
 
     private String anchorId = "";
     private final ConcurrentHashMap<String, AnchorVisual> anchorVisuals = new ConcurrentHashMap<>();
@@ -74,6 +74,8 @@ public class SharedActivity extends AppCompatActivity
 
         cloudAnchorManager = new AzureSpatialAnchorsManager(sceneView.getSession());
 
+
+        //在第一次按下按钮后就加上这个listener,但是只是在waiting click
         cloudAnchorManager.addSessionUpdatedListener(args -> {
             if (currentStep == DemoStep.DemoStepCreating) {
                 float progress = args.getStatus().getRecommendedForCreateProgress();
