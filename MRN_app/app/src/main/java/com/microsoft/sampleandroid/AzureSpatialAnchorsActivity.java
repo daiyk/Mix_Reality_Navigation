@@ -7,11 +7,13 @@ import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AppCompatActivity;
+import android.provider.DocumentsContract;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -35,6 +37,9 @@ import com.google.ar.sceneform.rendering.Material;
 import com.google.ar.sceneform.rendering.MaterialFactory;
 import com.google.ar.sceneform.ux.ArFragment;
 
+//third-party lib to pick real path from url
+import com.hbisoft.pickit.PickiT;
+import com.hbisoft.pickit.PickiTCallbacks;
 import com.microsoft.azure.spatialanchors.AnchorLocateCriteria;
 import com.microsoft.azure.spatialanchors.AnchorLocatedEvent;
 import com.microsoft.azure.spatialanchors.CloudSpatialAnchor;
@@ -53,9 +58,11 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-public class AzureSpatialAnchorsActivity extends AppCompatActivity
+
+public class AzureSpatialAnchorsActivity extends AppCompatActivity implements PickiTCallbacks
 {
     private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 101;
+    private static final int MY_PERMISSIONS_REQUEST_SAVE_CONTACTS=103;
     private static final int READ_REQUEST_CODE = 102;
     private String anchorID;
     private final ConcurrentHashMap<String, AnchorVisual> anchorVisuals = new ConcurrentHashMap<>();
@@ -96,6 +103,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
     private AnchorNode final_targetAnchor;
 
     private AnchorMap Map;
+    private PickiT pickit;
 
     private final LinkedHashMap<String,String> anchorNamesIdentifier = new LinkedHashMap<>();
     public void exitDemoClicked(View v) {
@@ -134,6 +142,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
             }
 
 
+
 //            if (currentDemoStep == DemoStep.NavigationEnd) {
 //                Vector3 cameraPosition = sceneView.getScene().getCamera().getWorldPosition();
 //                Vector3 targetPosition = targetAnchor.getWorldPosition();
@@ -170,11 +179,17 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
                     readyColor = material;
                     foundColor = material;
                 });
+
+        //set variable to pick real path from url
+        pickit = new PickiT(this, this);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        if (!isChangingConfigurations()) {
+            pickit.deleteTemporaryFile();
+        }
         destroySession();
     }
 
@@ -306,7 +321,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
 
 
             case LoadMap:
-
                 if (ContextCompat.checkSelfPermission(this,
                         Manifest.permission.READ_EXTERNAL_STORAGE)
                         != PackageManager.PERMISSION_GRANTED) {
@@ -326,11 +340,23 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
                 } else {
 
                     Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                    Uri uri = Uri.parse(Environment.getExternalStorageDirectory().getAbsolutePath()
-                            +  File.separator + "MixRealityNavi" + File.separator + "Maps" + File.separator);
+                    String map_path = Environment.getExternalStorageDirectory().getAbsolutePath() + File.separator + "MixRealityNavi" + File.separator + "Maps" + File.separator;
+                    File map_dir = new File(map_path);
+                    if (!map_dir.exists())
+                    {
+                        map_dir.mkdirs();
+                        Toast.makeText(this,"No Map file found in this device!",Toast.LENGTH_LONG).show();
+                    }
+//                    intent.setDataAndType(Uri.fromFile(map_dir.getParentFile()), "*/*");
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    Uri uri = Uri.parse(map_path);
                     intent.setDataAndType(uri, "*/*");
+//                    String uri_path = Environment.getExternalStorageDirectory().getAbsolutePath()
+//                            + File.separator + "MixRealityNavi" + File.separator + "Maps" + File.separator;
+//                    File dir = new File(uri_path);
+//                    intent.setDataAndType(Uri.fromFile(dir.getParentFile()), "file/*");
+                    //intent.setType("*/*");
                     startActivityForResult(intent, READ_REQUEST_CODE);
-                    int kk = 0;
 
                 }
                 break;
@@ -692,12 +718,30 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
                     // permission was granted, yay! Do the
                     // contacts-related task you need to do.
                 } else {
-                    Toast.makeText(this,"No Permission", Toast.LENGTH_LONG).show();
+                    Toast.makeText(this, "No Read Permission!", Toast.LENGTH_LONG).show();
                     // permission denied, boo! Disable the
                     // functionality that depends on this permission.
                 }
-                return;
+                break;
             }
+            case MY_PERMISSIONS_REQUEST_SAVE_CONTACTS: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                    //change for further improvement
+                    advanceDemo();
+                    // permission was granted, yay! Do the
+                    // contacts-related task you need to do.
+                } else {
+                    Toast.makeText(this, "No Save Permission!", Toast.LENGTH_LONG).show();
+                    // permission denied, boo! Disable the
+                    // functionality that depends on this permission.
+                }
+                break;
+
+            }
+
 
             // other 'case' lines to check for other
             // permissions this app might request.
@@ -717,21 +761,73 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity
             // Pull that URI using resultData.getData().
             Uri uri = null;
             if (resultData != null) {
-                uri = resultData.getData();
-                File file_uri = new File(uri.getPath());
-                final String[] split = file_uri.getPath().split(":");
-                String filePath = split[1];
-                FileManager file = new FileManager();
-                Map = file.loadMap(filePath);
-                Toast.makeText(this, "load map",Toast.LENGTH_LONG).show();
-                // Permission has already been granted
-                currentDemoStep = DemoStep.NavigationStart;
-                actionButton.setVisibility(View.VISIBLE);
-                statusText.setText("Map Loaded. Start Navigation");
-
-                file.saveMap("testLoad",Map);
+                pickit.getPath(resultData.getData(), Build.VERSION.SDK_INT);
+            }
+            else
+            {
+                Toast.makeText(this, "Error: content is Null! please reload!", Toast.LENGTH_SHORT).show();
+                Log.d("LoadMap",":selected file is invalid.");
+                return;
             }
         }
+        else {
+            Toast.makeText(this, "Error: Intent response failed!", Toast.LENGTH_SHORT).show();
+            Log.d("LoadMap", ":Load Intent response failed.");
+        }
+    }
+
+    //@following three functions are override of PickiT that get real path from uri
+    @Override
+    public void PickiTonStartListener() {
+
+    }
+
+    @Override
+    public void PickiTonProgressUpdate(int progress) {
+
+    }
+
+    @Override
+    public void PickiTonCompleteListener(String path, boolean wasDriveFile, boolean wasUnknownProvider, boolean wasSuccessful, String Reason) {
+
+        //  Check if it was a Drive/local/unknown provider file and display a Toast
+        if (wasDriveFile){
+            Toast.makeText(this, "Drive file was selected", Toast.LENGTH_LONG).show();
+        }else if (wasUnknownProvider){
+            Toast.makeText(this, "File was selected from unknown provider", Toast.LENGTH_LONG).show();
+        }else {
+            Toast.makeText(this, "Local file was selected", Toast.LENGTH_LONG).show();
+        }
+
+        //check if text read successful
+        if (wasSuccessful) {
+            //  Set returned path to TextView
+            FileManager file = new FileManager();
+            AnchorMap LoadMap = file.loadMap(path);
+            if(LoadMap !=null) {
+                Map = LoadMap;
+                Toast.makeText(this, "Load map from: "+path, Toast.LENGTH_LONG).show();
+
+                // Permission has already been granted
+                currentDemoStep = DemoStep.NavigationStart;
+
+                //set button temporal invisiable
+                actionButton.setVisibility(View.INVISIBLE);
+                statusText.setText("Map Loaded. Start Navigation");
+                // Permission has already been granted
+
+            }
+        }else {
+            Toast.makeText(this, "Cannot read the map file!", Toast.LENGTH_SHORT).show();
+            Log.d("LoadMapFail"," :"+Toast.LENGTH_LONG);
+        }
+    }
+
+    //delete temporal files if it is read from unknown sources or provider
+    @Override
+    public void onBackPressed() {
+        pickit.deleteTemporaryFile();
+        super.onBackPressed();
     }
 
     enum DemoStep {

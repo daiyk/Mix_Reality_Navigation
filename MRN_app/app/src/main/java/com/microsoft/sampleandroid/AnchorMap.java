@@ -10,6 +10,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import com.google.ar.sceneform.math.Vector3;
 
 public class AnchorMap {
     static int NodesID = 0;
@@ -17,6 +18,7 @@ public class AnchorMap {
     private HashMap<String,Integer> mapping = new HashMap<>();
     private ArrayList<ArrayList<Integer>> adjacencyList = new ArrayList<ArrayList<Integer>>();
     private ArrayList<Node> NodeList = new ArrayList<>();
+    private HashMap<String,Vector3> transf = new HashMap<>();
 
     //CONSTRUCTOR
     public AnchorMap(){
@@ -78,7 +80,8 @@ public class AnchorMap {
     //METHOD: add edge between two anchors
     //anchor1: user-defined anchorname 1
     //anchor2: user-defined anchorname 2
-    public boolean addEdge(String anchor1, String anchor2) throws UnsupportedOperationException
+    //pos1,po2: two anchors world's coordinates
+    public boolean addEdge(String anchor1, String anchor2, Vector3 pos1, Vector3 pos2) throws UnsupportedOperationException
     {
         //search on the hashmap for corresponding node
         if(!mapping.containsKey(anchor1)||!mapping.containsKey(anchor2))
@@ -94,6 +97,15 @@ public class AnchorMap {
             adjacencyList.get(Idx1).add(Idx2);
         if(!adjacencyList.get(Idx2).contains(Idx1))
             adjacencyList.get(Idx2).add(Idx1);
+
+        // add transformation vector to the hash dataset
+        //compute transformation
+        Vector3 transf12 = Vector3.subtract(pos2,pos1);
+        Vector3 transf21 = Vector3.subtract(pos1,pos2);
+
+        //add transformation to hashmap
+        transf.put(Integer.toString(Idx1)+Integer.toString(Idx2),transf12);
+        transf.put(Integer.toString(Idx2)+Integer.toString(Idx1),transf21);
 
         return true;
     }

@@ -185,11 +185,12 @@ public final class FileManager {
 
 
     //Load xml file to xml
-    public AnchorMap loadMap(String xmlPath)
+    public AnchorMap loadMap(String file_path)
     {
         AnchorMap map = new AnchorMap();
         try{
-            File xmlfile = new File(xmlPath);
+            File xmlfile = new File(file_path);
+//            File xmlfile = file_path;
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
             Document doc = dBuilder.parse(xmlfile);
