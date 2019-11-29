@@ -127,6 +127,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
     private AnchorNode arrowAnchor = null;
     private float[] rotationMatrix = new float[16];
     Matrix4f rotationMatrix_4f = new Matrix4f();
+    Matrix4f rotaionMatrix_coordsys2= new Matrix4f();
 
     private AnchorNode final_targetAnchor;
 
@@ -455,40 +456,25 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 //                final Vector3[] nextAnchorTransf = {Vector3.add(getTransformedCoordinates(rotationMatrix[0], anchorMap.getEdge(sourceName, nextAnchorName[0])),current_worldcoord[0])};
 //                final Vector3[] nextAnchorTransf = {getTransformedCoordinates(rotationMatrix, anchorMap.getEdge(sourceName,nextAnchorName[0]))};
 //                final Vector3[] nextAnchorTransf = {Vector3.add(getTransformedCoordinates(rotationMatrix[0], anchorMap.getPos(nextAnchorName[0])),Vector3.subtract(current_worldcoord[0], origin_worldcoord[0]))};
+//                final Vector3[] nextAnchorTransf = {getTransformedCoordinates_new(rotationMatrix_4f, anchorMap.getPos(nextAnchorName[0]))};
 
-                final Vector3[] nextAnchorTransf = {getTransformedCoordinates_new(rotationMatrix_4f, anchorMap.getPos(nextAnchorName[0]))};
+                float[] rotaionMatrix_coordsys1 = anchorMap.getMatrix(sourceName);
+                final Vector3[] nextAnchorTransf = {getTransformedCoordinates_relative(rotaionMatrix_coordsys1, rotaionMatrix_coordsys2, anchorMap.getPos(nextAnchorName[0]))};
 
                 arrow.setEnabled(true);
                 arrow.updateTargetPos(nextAnchorTransf[0]);
 //                dummyNode.setWorldPosition(nextAnchorTransf[0]);
 //                arrow.updateTargetAnchor(dummyNode);
                 final String[] nextAnchorID = {anchorMap.getNode(nextAnchorName[0]).AnchorID};
-//                arrow.updateTargetAnchor(dummyNode);
-                //arrow.updateTargetAnchor(temptargetAnchor);
-//                stopWatcher();
 
                 Scene scene = sceneView.getScene();
                 scene.addOnUpdateListener(frameTime -> {
 
-//                    if(temptargetAnchor != null){
-//                        arrowAnchor = temptargetAnchor;
-//                    }
-//                    else{
-//                        arrowAnchor = dummyNode;
-//                    }
                     Vector3 targetPosition = nextAnchorTransf[0];//temptargetAnchor.getWorldPosition();
                     Vector3 cameraPosition = sceneView.getScene().getCamera().getWorldPosition();
-                    //distance = (float) ( Math.abs(Math.sqrt(targetPosition.x * targetPosition.x + targetPosition.z * targetPosition.z)-
-                    //        Math.sqrt(cameraPosition.x * cameraPosition.x + cameraPosition.z * cameraPosition.z)));
                     distance = (float) Math.sqrt((targetPosition.x - cameraPosition.x)*(targetPosition.x - cameraPosition.x) +
                             (targetPosition.z - cameraPosition.z)*(targetPosition.z - cameraPosition.z));
                     statusText.setText(String.valueOf(distance));
-
-//                    current_worldcoord[0] = anchorVisuals.get("").getAnchorNode().getWorldPosition();
-//                    origin_worldcoord[0] = anchorMap.getPos(sourceName);
-//                    Vector3f origin_worldcoord_v_update = new Vector3f(origin_worldcoord[0].normalized().x, origin_worldcoord[0].normalized().y, origin_worldcoord[0].normalized().z);
-//                    Vector3f current_worldcoord_z_update = new Vector3f(current_worldcoord[0].normalized().x, current_worldcoord[0].normalized().y, current_worldcoord[0].normalized().z);
-//                    rotationMatrix[0] = getTransformationMatrix(origin_worldcoord_v_update,current_worldcoord_z_update);
 
                     if (distance < 0.3) {
                         temptargetAnchor = null;
@@ -509,10 +495,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 
                         }
                         arrow.updateTargetPos(nextAnchorTransf[0]);
-//                        dummyNode.setWorldPosition(nextAnchorTransf[0]);
-//                        arrow.updateTargetAnchor(dummyNode);
-                        //getTransformedCoordinates(rotationMatrix, anchorMap.getPos(nextAnchorName_update));
-                        //                        nextAnchorID[0] = anchorMap.getNode(nextAnchorName[0]).AnchorID;
                     }
 
                     if (reachTarget){
@@ -527,8 +509,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                         });
                     }
                 });
-//                arrow.updateTargetPos(nextAnchorTransf[0]);
-//                arrow.setEnabled(true);
 
                 currentDemoStep =DemoStep.End;
 //                for (AnchorVisual toDeleteVisual : anchorVisuals.values()) {
@@ -665,22 +645,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 
     //当criteria定义的寻找目标全部完成时调用，不然一直调用onAnchorLocated（）
     private void onLocateAnchorsCompleted(LocateAnchorsCompletedEvent event) {
-
-//        if (!basicDemo && currentDemoStep == DemoStep.LookForAnchor) {
-//            runOnUiThread(() -> {
-//                actionButton.setVisibility(View.VISIBLE);
-//                actionButton.setText("Look for anchors nearby");
-//            });
-//            currentDemoStep = DemoStep.LookForNearbyAnchors;
-//        } else {
-//            stopWatcher();
-//            runOnUiThread(() -> {
-//                actionButton.setVisibility(View.VISIBLE);
-//                //actionButton.setText("Cleanup anchors");
-//                actionButton.setText("Start Navigation");
-//            });
-//            currentDemoStep = DemoStep.NavigationStart;
-//        }
         // Here we only look for the source Anchor
         if(currentDemoStep == DemoStep.LookForAnchor){
 //            stopWatcher();
@@ -739,6 +703,8 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
             temptargetAnchor = foundVisual.getAnchorNode();
             //String anchorName = String.format("%d", ++anchorFound);
             anchorVisuals.put("", foundVisual);
+
+//            Here are tests of functions of Poses
 //            float[] q = anchor.getLocalAnchor().getPose().getRotationQuaternion();
 //            float[] test = {(float) -0.2766, (float) -1.39, (float) -0.072};
 //            float[] testresutl = anchor.getLocalAnchor().getPose().transformPoint(test);
@@ -749,45 +715,33 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 //            Vector3 real = foundVisual.getAnchorNode().getWorldPosition();
 //
 //            Quaternion aaa = foundVisual.getAnchorNode().getWorldRotation();
-            Vector3 test = foundVisual.getAnchorNode().getWorldPosition();
-            Pose pose = anchor.getLocalAnchor().getPose();
-            float[] a = new float[16];
-            float[] b = new float[16];
+//            Vector3 test = foundVisual.getAnchorNode().getWorldPosition();
+//            Pose pose = anchor.getLocalAnchor().getPose();
+//            float[] a = new float[16];
+//            float[] b = new float[16];
+//            pose.toMatrix(a, 0);
+//            Pose pose_in = pose.inverse();
+//            pose_in.toMatrix(b, 0);
+//            float[] test_world = new float[]{test.x, test.y, test.z};
+//            float[] c = pose_in.transformPoint(test_world);
+//            //pose.toMatrix(rotationMatrix, 0);
+//            float[] rot = pose.getRotationQuaternion();
+//            float[] vec = pose.getTranslation();
+//            Quat4f rotation = new Quat4f(rot[0], rot[1], rot[2], rot[3]);
+//            Vector3f vector = new Vector3f(vec[0], vec[1], vec[2]);
+//            rotationMatrix_4f.set(rotation, vector, 1);
 
-            pose.toMatrix(a, 0);
-            Pose pose_in = pose.inverse();
-            pose_in.toMatrix(b, 0);
-            float[] test_world = new float[]{test.x, test.y, test.z};
-            float[] c = pose_in.transformPoint(test_world);
-            //pose.toMatrix(rotationMatrix, 0);
-            float[] rot = pose.getRotationQuaternion();
-            float[] vec = pose.getTranslation();
-            Quat4f rotation = new Quat4f(rot[0], rot[1], rot[2], rot[3]);
-            Vector3f vector = new Vector3f(vec[0], vec[1], vec[2]);
+            // Get pose of the located anchor, then compute the rotationMatrix for Current Coordinate System
+            Pose pose_coordsys2 = anchor.getLocalAnchor().getPose();
+            float[] rot_c2 = pose_coordsys2.getRotationQuaternion();
+            float[] vec_c2 = pose_coordsys2.getTranslation();
+            Quat4f rotation_c2 = new Quat4f(rot_c2[0], rot_c2[1], rot_c2[2], rot_c2[3]);
+            Vector3f vector_c2 = new Vector3f(vec_c2[0], vec_c2[1], vec_c2[2]);
+            rotaionMatrix_coordsys2.set(rotation_c2, vector_c2,1);
 
-            rotationMatrix_4f.set(rotation, vector, 1);
-            //            foundVisual.setCloudAnchor(anchor);
-//            foundVisual.getAnchorNode().setParent(arFragment.getArSceneView().getScene());
-//
-//
-//            String cloudAnchorIdentifier = foundVisual.getCloudAnchor().getIdentifier();
-//            //statusText.setText(String.format("cloud Anchor Identifier: %s",cloudAnchorIdentifier));
             foundVisual.setColor(foundColor);
-//
-//            String anchorName = String.format("Anchor %d", ++anchorFound);
-//            anchorNamesIdentifier.put(anchorName, cloudAnchorIdentifier);
-//            float anchorscale = 0.5f;
-//            Vector3 localPos = new Vector3(0.0f, anchorscale * 0.55f, 0.0f);
-//            AnchorBoard anchorBoard = new AnchorBoard(this, "test", 0.5f, localPos);
-//            anchorBoard.setParent(foundVisual.getAnchorNode());
-
             foundVisual.render(arFragment);
 
-            //record anchors with its name as key
-//        if(currentDemoStep == DemoStep.LookForAnchor) {
-//            anchorID = anchorName;
-//        }
-//            anchorVisuals.put(cloudAnchorIdentifier, foundVisual);
         }
         else if(currentDemoStep == DemoStep.NavigationStart){
             // Render anchors during the navigation process, can be deleted later
@@ -853,17 +807,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 
     private void onClick(){
         if (currentDemoStep == DemoStep.ChooseStartPoint){
-            // Use RadioGroup
-//            int radioId = radioGroup.getCheckedRadioButtonId();
-//            radioButton = findViewById(radioId);
-//            sourceName = (String)radioButton.getText();
-//            // Get start point anchor ID for "LookForAnchor"
-//            anchorID = anchorMap.getNode(sourceName).AnchorID;
-//            runOnUiThread(() -> {
-//                actionButton.setText("Look for Start Anchor");
-//                statusText.setText("");
-//
-//            });
 
             // Use Spinner
             sourceName = spinner.getSelectedItem().toString();
@@ -881,14 +824,9 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
             advanceDemo();
         }
         if (currentDemoStep == DemoStep.NavigationStart){
-//            int radioId = radioGroup.getCheckedRadioButtonId();
-//            radioButton = findViewById(radioId);
-//            targetName = (String)radioButton.getText();
-//            textView.setText("Navigate to "+ radioButton.getText());
+
             targetName = spinner.getSelectedItem().toString();
             runOnUiThread(() -> {
-//                textView.setText((CharSequence) dictionary.keySet().toArray()[0]);
-//                statusText.setText(radioButton.getText());
                 statusText.setText("Destination selected");
                 spinner.setVisibility(View.INVISIBLE);
                 navigateButton.setVisibility(View.INVISIBLE);
@@ -926,14 +864,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                 textView.setText("");
                 spinner.setVisibility(View.VISIBLE);
             });
-//            Iterator AnchorIterator = anchorNamesIdentifier.entrySet().iterator();
-//            int count = radioGroup.getChildCount();
-//            int i = 0;
-//            while(AnchorIterator.hasNext()){
-//                Map.Entry mapElement = (Map.Entry)AnchorIterator.next();
-//                RadioButton b = (RadioButton)radioGroup.getChildAt(i++);
-//                b.setText((CharSequence) mapElement.getKey());
-//            };
         }
     }
 
@@ -961,6 +891,18 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 
         return u;
     }
+
+    public Vector3 getTransformedCoordinates_relative(float[] inv_R1, Matrix4f R2, Vector3 Bworld1){
+        Vector3 Bworld2 = new Vector3();
+        float x = inv_R1[0]*Bworld1.x + inv_R1[4]*Bworld1.y + inv_R1[8]*Bworld1.z + inv_R1[12];
+        float y = inv_R1[1]*Bworld1.x + inv_R1[5]*Bworld1.y + inv_R1[8]*Bworld1.z + inv_R1[13];
+        float z = inv_R1[2]*Bworld1.x + inv_R1[6]*Bworld1.y + inv_R1[10]*Bworld1.z + inv_R1[14];
+        Bworld2.x = R2.m00 * x + R2.m01 * y + R2.m02 * z + R2.m03;
+        Bworld2.y = R2.m10 * x + R2.m11 * y + R2.m12 * z + R2.m13;
+        Bworld2.z = R2.m20 * x + R2.m21 * y + R2.m22 * z + R2.m23;
+        return Bworld2;
+    }
+
 
     public Vector3 getTransformedCoordinates_new(Matrix4f R, Vector3 vec) {
 //        float x = R[0]*vec.x + R[4]*vec.y + R[8]*vec.z + R[12];
@@ -1116,40 +1058,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
         else
             return "Empty";
     }
-
-//    public boolean navigationProcess(ArrayList<String> optPath, int idx){
-//
-//        while(!reachTarget){
-//        }
-//        while(!reachTarget){
-//
-////                 test continuous navigation
-////                Iterator it = anchorNamesIdentifier.keySet().iterator();
-////                it.next();
-////                AnchorVisual tempAnchor = anchorVisuals.get(anchorNamesIdentifier.get(it.next()));
-////                AnchorVisual targetAnchorVisual = tempAnchor;
-//            idx ++;
-//
-//            // Vector3 targetPosition = anchorMap.getTransformation();
-//
-////            AnchorVisual targetAnchorVisual = anchorVisuals.get(anchorNamesIdentifier.get("Anchor 2"));
-////            targetAnchor = targetAnchorVisual.getAnchorNode();
-//            //arrow.updateTargetAnchor(targetAnchorVisual.getAnchorNode());
-//
-//
-//            //targetAnchorVisual.render(arFragment);
-//            //end navigation button
-//            runOnUiThread(() -> {
-//                statusText.setText("");
-//                backButton.setVisibility(View.VISIBLE);
-//                actionButton.setVisibility(View.INVISIBLE);
-//                radioGroup.setVisibility(View.INVISIBLE);
-//                textView.setVisibility(View.INVISIBLE);
-//                navigateButton.setVisibility(View.INVISIBLE);
-//            });
-//        }
-//
-//    }
 
     public void onActivityResult(int requestCode, int resultCode,
                                  Intent resultData) {
