@@ -18,6 +18,7 @@ import com.google.ar.sceneform.rendering.ModelRenderable;
 import com.google.ar.sceneform.rendering.Renderable;
 import com.google.ar.sceneform.ux.TransformableNode;
 import com.google.ar.sceneform.ux.TransformationSystem;
+import com.hbisoft.pickit.PickiTCallbacks;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -27,7 +28,7 @@ public class AnchorArrow extends TransformableNode {
     private static final float INFO_CARD_Y_POS_COEFF = 0.55f;
     private final Context context;
     private Vector3 localPos;
-    private Node targetAnchor;
+    private Node targetAnchor = new Node();
     private void addHighlightToNode(Node node) {
         CompletableFuture<Material> materialCompletableFuture =
                 MaterialFactory.makeOpaqueWithColor(this.context, new Color(240, 0, 244));
@@ -39,17 +40,20 @@ public class AnchorArrow extends TransformableNode {
         });
     }
 
+    // context: the context of the application(this), as parent of anchorarrow
+    //localPos: relative position of arrow to the camera
+    //TransformationSystem: current scene transformation system
     public AnchorArrow(
             Context context,
             Vector3 localPos,
             TransformationSystem arTransform
-        ){
+    ){
         super(arTransform);
         this.context = context;
         this.localPos = localPos;
         this.getScaleController().setMaxScale(0.12f);
         this.getScaleController().setMinScale(0.1f);
-        targetAnchor = this;
+        //initialize targetAnchor to this anchor
     }
     //@overide
     public void onActivate(){
@@ -58,8 +62,9 @@ public class AnchorArrow extends TransformableNode {
             throw new IllegalStateException("Scene is null!");
         }
 
-
-
+        //set origin targetAnchor point to origin
+//        targetAnchor.setWorldPosition(new Vector3(0.0f,0.0f,0.0f));
+//        targetAnchor = this;
         ModelRenderable.builder()
                 .setSource(this.context, Uri.parse("scene.sfb"))
                 .build()
@@ -77,6 +82,11 @@ public class AnchorArrow extends TransformableNode {
                             toast.show();
                             return null;
                         });
+    }
+    public void updateTargetPos(Vector3 pos)
+    {
+        //set anchor to point to the transformation position
+        targetAnchor.setWorldPosition(pos);
     }
     public void updateTargetAnchor(AnchorNode Anchor)
     {

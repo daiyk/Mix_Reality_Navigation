@@ -12,6 +12,8 @@ import com.google.ar.sceneform.ux.ArFragment;
 import com.google.ar.sceneform.ux.TransformableNode;
 import com.microsoft.azure.spatialanchors.CloudSpatialAnchor;
 
+import java.util.Vector;
+
 class AnchorVisual {
     private final AnchorNode anchorNode;
     private CloudSpatialAnchor cloudAnchor;
@@ -36,7 +38,8 @@ class AnchorVisual {
 
     public void render(ArFragment arFragment) {
         MainThreadContext.runOnUiThread(() -> {
-            nodeRenderable = ShapeFactory.makeSphere(0.1f, new Vector3(0.0f, 0.15f, 0.0f), color);
+//            nodeRenderable = ShapeFactory.makeSphere(0.1f, new Vector3(0.0f, 0.15f, 0.0f), color);
+            nodeRenderable = ShapeFactory.makeCube(new Vector3(0.1f,0.1f,0.1f), new Vector3(0.0f, 0.15f, 0.0f), color);
             anchorNode.setRenderable(nodeRenderable);
             anchorNode.setParent(arFragment.getArSceneView().getScene());
 
@@ -56,7 +59,8 @@ class AnchorVisual {
 
         MainThreadContext.runOnUiThread(() -> {
             anchorNode.setRenderable(null);
-            nodeRenderable = ShapeFactory.makeSphere(0.1f, new Vector3(0.0f, 0.15f, 0.0f), color);
+//            nodeRenderable = ShapeFactory.makeSphere(0.1f, new Vector3(0.0f, 0.15f, 0.0f), color);
+            nodeRenderable = ShapeFactory.makeCube(new Vector3(0.1f,0.1f,0.1f), new Vector3(0.0f, 0.15f, 0.0f), color);
             anchorNode.setRenderable(nodeRenderable);
         });
     }

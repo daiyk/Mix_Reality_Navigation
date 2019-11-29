@@ -5,17 +5,13 @@ package com.microsoft.sampleandroid;
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
-import android.support.v4.app.ActivityCompat;
-import android.support.v4.content.ContextCompat;
-import android.support.v7.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -48,14 +44,12 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
+
+import javax.vecmath.Vector3d;
 
 public class MapBuildingActivity extends AppCompatActivity
 {
@@ -73,8 +67,8 @@ public class MapBuildingActivity extends AppCompatActivity
     private final Object renderLock = new Object();
     private int saveCount = 0;
     private int anchorFound = 0;
-
     private boolean finish = false;
+    private Vector3 lastAnchorPos = new Vector3();
 
     // Materials
     private static Material failedColor;
@@ -303,14 +297,14 @@ public class MapBuildingActivity extends AppCompatActivity
                     // Permission is not granted
                     // Should we show an explanation?
 
-                        // No explanation needed; request the permission
+                    // No explanation needed; request the permission
                     ActivityCompat.requestPermissions(this,
                             new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                             MY_PERMISSIONS_REQUEST_READ_CONTACTS);
 
-                        // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
-                        // app-defined int constant. The callback method gets the
-                        // result of the request.
+                    // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                    // app-defined int constant. The callback method gets the
+                    // result of the request.
 
                 } else {
                     FileManager file = new FileManager();
@@ -356,10 +350,12 @@ public class MapBuildingActivity extends AppCompatActivity
 
         AnchorVisual visual = anchorVisuals.get("");
 
+        //pos of the last anchor, which is used to compute transformation
         AnchorNames.add(String.format("Anchor %d", saveCount - 1));
         addToMap(AnchorNames ,anchorID, NodeType.Major);
+        lastAnchorPos = visual.getAnchorNode().getWorldPosition();
 
-        //储存完毕并且把anchor删除
+        //储存完毕并且把临时anchor删除
         visual.setColor(savedColor);
         anchorVisuals.put(anchorID, visual);
         anchorVisuals.remove("");
@@ -564,6 +560,12 @@ public class MapBuildingActivity extends AppCompatActivity
     private void onClick(){
         finish = true;
         finishButton.setVisibility(View.GONE);
+
+        Vector3 pos1 = Map.getPos(AnchorNames.get(AnchorNames.size()-1));
+        Vector3 pos2 = Map.getPos("Anchor 0");
+        Map.addEdge((String) AnchorNames.get(AnchorNames.size()-1),(String) AnchorNames.get(0),pos1,pos2);
+
+
         currentDemoStep = DemoStep.SaveMap;
         advanceDemo();
     }
@@ -573,8 +575,10 @@ public class MapBuildingActivity extends AppCompatActivity
             Map.addNode((String) AnchorNames.get(AnchorNames.size()-1), AnchorID, AnchorType);
         }
         else{
+            //"" is the current located anchor
+            Vector3 pos1 = anchorVisuals.get("").getAnchorNode().getWorldPosition();
             Map.addNode((String) AnchorNames.get(AnchorNames.size()-1), AnchorID, AnchorType);
-            Map.addEdge((String) AnchorNames.get(AnchorNames.size()-1),(String) AnchorNames.get(AnchorNames.size()-2));
+            Map.addEdge((String) AnchorNames.get(AnchorNames.size()-1),(String) AnchorNames.get(AnchorNames.size()-2),pos1,lastAnchorPos);
         }
     }
 

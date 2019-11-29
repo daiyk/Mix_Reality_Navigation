@@ -32,10 +32,12 @@ import android.widget.Toast;
 import com.google.ar.core.Anchor;
 import com.google.ar.core.HitResult;
 import com.google.ar.core.Plane;
+import com.google.ar.core.Pose;
 import com.google.ar.sceneform.AnchorNode;
 import com.google.ar.sceneform.ArSceneView;
 import com.google.ar.sceneform.HitTestResult;
 import com.google.ar.sceneform.Scene;
+import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.Color;
 import com.google.ar.sceneform.rendering.Material;
@@ -74,7 +76,11 @@ import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.vecmath.Matrix3d;
+import javax.vecmath.Matrix3f;
+import javax.vecmath.Matrix4f;
+import javax.vecmath.Quat4f;
 import javax.vecmath.Vector3d;
+import javax.vecmath.Vector3f;
 
 public class AzureSpatialAnchorsActivity extends AppCompatActivity implements PickiTCallbacks
 {
@@ -119,6 +125,8 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
     private boolean update_anchor;
     private AnchorNode temptargetAnchor = null;
     private AnchorNode arrowAnchor = null;
+    private float[] rotationMatrix = new float[16];
+    Matrix4f rotationMatrix_4f = new Matrix4f();
 
     private AnchorNode final_targetAnchor;
 
@@ -431,21 +439,30 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                 }
 
 //                LookforAnchor_realtime(stack_id.pop());
-                Vector3 current_worldcoord = anchorVisuals.get("").getAnchorNode().getWorldPosition();
-                Vector3 origin_worldcoord = anchorMap.getPos(sourceName);
-
-                double[][] rotationMatrix = getTransformationMatrix(origin_worldcoord.normalized(), current_worldcoord.normalized());
+//                final Vector3[] current_worldcoord = {anchorVisuals.get("").getAnchorNode().getWorldPosition()};
+//                final Vector3[] origin_worldcoord = {anchorMap.getPos(sourceName)};
+//
+//                final Vector3f[] origin_worldcoord_v = {new Vector3f(origin_worldcoord[0].normalized().x, origin_worldcoord[0].normalized().y, origin_worldcoord[0].normalized().z)};
+//                final Vector3f[] current_worldcoord_z = {new Vector3f(current_worldcoord[0].normalized().x, current_worldcoord[0].normalized().y, current_worldcoord[0].normalized().z)};
+//                final Matrix3f[] rotationMatrix = {getTransformationMatrix(origin_worldcoord_v[0], current_worldcoord_z[0])};
 
                 // Init as first direction
-                final String nextAnchorName = toNextAnchor(stack_path);
-//                AnchorNode dummyNode = null;
+                final String[] nextAnchorName = {toNextAnchor(stack_path)};
+                AnchorNode dummyNode = new AnchorNode();
+
 //                final Vector3[] nextAnchorTransf = {Vector3.add(getTransformedCoordinates(rotationMatrix, anchorMap.getPos(nextAnchorName)), current_worldcoord)};//{Vector3.add(getTransformedCoordinates(rotationMatrix, anchorMap.getEdge(sourceName,nextAnchorName)),current_worldcoord)};
-                final Vector3[] nextAnchorTransf = {getTransformedCoordinates(rotationMatrix, anchorMap.getPos(nextAnchorName))};//{Vector3.add(getTransformedCoordinates(rotationMatrix, anchorMap.getEdge(sourceName,nextAnchorName)),current_worldcoord)};
+//                final Vector3[] nextAnchorTransf = {getTransformedCoordinates(rotationMatrix, anchorMap.getPos(nextAnchorName))};
+//                final Vector3[] nextAnchorTransf = {Vector3.add(getTransformedCoordinates(rotationMatrix[0], anchorMap.getEdge(sourceName, nextAnchorName[0])),current_worldcoord[0])};
+//                final Vector3[] nextAnchorTransf = {getTransformedCoordinates(rotationMatrix, anchorMap.getEdge(sourceName,nextAnchorName[0]))};
+//                final Vector3[] nextAnchorTransf = {Vector3.add(getTransformedCoordinates(rotationMatrix[0], anchorMap.getPos(nextAnchorName[0])),Vector3.subtract(current_worldcoord[0], origin_worldcoord[0]))};
+
+                final Vector3[] nextAnchorTransf = {getTransformedCoordinates_new(rotationMatrix_4f, anchorMap.getPos(nextAnchorName[0]))};
+
                 arrow.setEnabled(true);
                 arrow.updateTargetPos(nextAnchorTransf[0]);
-//                dummyNode.setWorldPosition(nextAnchorTransf);
-
-                final String[] nextAnchorID = {anchorMap.getNode(nextAnchorName).AnchorID};
+//                dummyNode.setWorldPosition(nextAnchorTransf[0]);
+//                arrow.updateTargetAnchor(dummyNode);
+                final String[] nextAnchorID = {anchorMap.getNode(nextAnchorName[0]).AnchorID};
 //                arrow.updateTargetAnchor(dummyNode);
                 //arrow.updateTargetAnchor(temptargetAnchor);
 //                stopWatcher();
@@ -467,11 +484,23 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                             (targetPosition.z - cameraPosition.z)*(targetPosition.z - cameraPosition.z));
                     statusText.setText(String.valueOf(distance));
 
+//                    current_worldcoord[0] = anchorVisuals.get("").getAnchorNode().getWorldPosition();
+//                    origin_worldcoord[0] = anchorMap.getPos(sourceName);
+//                    Vector3f origin_worldcoord_v_update = new Vector3f(origin_worldcoord[0].normalized().x, origin_worldcoord[0].normalized().y, origin_worldcoord[0].normalized().z);
+//                    Vector3f current_worldcoord_z_update = new Vector3f(current_worldcoord[0].normalized().x, current_worldcoord[0].normalized().y, current_worldcoord[0].normalized().z);
+//                    rotationMatrix[0] = getTransformationMatrix(origin_worldcoord_v_update,current_worldcoord_z_update);
+
                     if (distance < 0.3) {
                         temptargetAnchor = null;
                         String nextAnchorName_update = toNextAnchor(stack_path);
                         if (nextAnchorName_update !="Empty"){
-                            nextAnchorTransf[0] = getTransformedCoordinates(rotationMatrix, anchorMap.getPos(nextAnchorName_update));
+//                            nextAnchorTransf[0] = getTransformedCoordinates(rotationMatrix, anchorMap.getPos(nextAnchorName_update));
+//                            nextAnchorTransf[0] = Vector3.add(getTransformedCoordinates(rotationMatrix[0], anchorMap.getEdge(nextAnchorName[0],nextAnchorName_update)),nextAnchorTransf[0]);
+//                            nextAnchorTransf[0] = getTransformedCoordinates(rotationMatrix, anchorMap.getEdge(nextAnchorName[0],nextAnchorName_update));
+//                            nextAnchorTransf[0] = Vector3.add(getTransformedCoordinates(rotationMatrix[0], anchorMap.getPos(nextAnchorName_update)),Vector3.subtract(current_worldcoord[0], origin_worldcoord[0]));
+                            nextAnchorTransf[0] = getTransformedCoordinates_new(rotationMatrix_4f, anchorMap.getPos(nextAnchorName_update));
+                            nextAnchorName[0] = nextAnchorName_update;
+
                         }
                         else{
                             statusText.setText("Reach Final Destination");
@@ -479,8 +508,10 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                             actionButton.setText("End Navigation");
 
                         }
-                        //getTransformedCoordinates(rotationMatrix, anchorMap.getPos(nextAnchorName_update));
                         arrow.updateTargetPos(nextAnchorTransf[0]);
+//                        dummyNode.setWorldPosition(nextAnchorTransf[0]);
+//                        arrow.updateTargetAnchor(dummyNode);
+                        //getTransformedCoordinates(rotationMatrix, anchorMap.getPos(nextAnchorName_update));
                         //                        nextAnchorID[0] = anchorMap.getNode(nextAnchorName[0]).AnchorID;
                     }
 
@@ -708,8 +739,34 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
             temptargetAnchor = foundVisual.getAnchorNode();
             //String anchorName = String.format("%d", ++anchorFound);
             anchorVisuals.put("", foundVisual);
+//            float[] q = anchor.getLocalAnchor().getPose().getRotationQuaternion();
+//            float[] test = {(float) -0.2766, (float) -1.39, (float) -0.072};
+//            float[] testresutl = anchor.getLocalAnchor().getPose().transformPoint(test);
+//            float real = anchor.getLocalAnchor().getPose().tx();
+//            float[] realrestul =
+//            Pose pose = anchor.getLocalAnchor().getPose().extractRotation();
+//            Pose trans = anchor.getLocalAnchor().getPose().extractTranslation();
+//            Vector3 real = foundVisual.getAnchorNode().getWorldPosition();
+//
+//            Quaternion aaa = foundVisual.getAnchorNode().getWorldRotation();
+            Vector3 test = foundVisual.getAnchorNode().getWorldPosition();
+            Pose pose = anchor.getLocalAnchor().getPose();
+            float[] a = new float[16];
+            float[] b = new float[16];
 
-//            foundVisual.setCloudAnchor(anchor);
+            pose.toMatrix(a, 0);
+            Pose pose_in = pose.inverse();
+            pose_in.toMatrix(b, 0);
+            float[] test_world = new float[]{test.x, test.y, test.z};
+            float[] c = pose_in.transformPoint(test_world);
+            //pose.toMatrix(rotationMatrix, 0);
+            float[] rot = pose.getRotationQuaternion();
+            float[] vec = pose.getTranslation();
+            Quat4f rotation = new Quat4f(rot[0], rot[1], rot[2], rot[3]);
+            Vector3f vector = new Vector3f(vec[0], vec[1], vec[2]);
+
+            rotationMatrix_4f.set(rotation, vector, 1);
+            //            foundVisual.setCloudAnchor(anchor);
 //            foundVisual.getAnchorNode().setParent(arFragment.getArSceneView().getScene());
 //
 //
@@ -880,41 +937,82 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
         }
     }
 
-    public double[][] getTransformationMatrix(Vector3 vec1, Vector3 vec2){
+    public Matrix3f getTransformationMatrix(Vector3f vec1, Vector3f vec2){
+        //vec1.normalize();
 
-        Vector3 v = Vector3.cross(vec1, vec2);
-        float s = (float) Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
-        float c = Vector3.dot(vec1, vec2);
-        float scale = (float) 1/(1+c);//(1-c)/(s*s);
+        //vec2.normalize();
+        Vector3f v = new Vector3f();
+        v.cross(vec1, vec2);
+        float sinAngle = v.length();
+        float c = vec1.dot(vec2);
 
-        Matrix3d vx = new Matrix3d(0, -v.z, v.y, v.z, 0, -v.x, -v.y, v.x, 0);
-        Matrix3d eye = new Matrix3d(1,0,0,0,1,0,0,0,1);
-        Matrix3d vx2 = new Matrix3d();
-        vx2.mul(vx,vx);
-        vx2.mul(scale);
-        vx.add(vx2);
-        Matrix3d rotationMatrix = new Matrix3d();
-        rotationMatrix.add(eye, vx);
+        //build matrix
+        Matrix3f u = new Matrix3f(0.f,-v.z,v.y,v.z,0.f,-v.x,-v.y,v.x,0.f);
+        Matrix3f u2 = new Matrix3f();
+        u2.mul(u,u);
 
-        double[][] R = new double[3][3];
-        R[0][0] = 1 + 0 + scale * (-v.z*v.z-v.y*v.y);
-        R[0][1] = 0 + (-v.z) + scale * (v.x * v.y);
-        R[0][2] = 0 + v.y + scale * (v.x * v.z);
+        //coeff
+        float coeff = 1.f/(1+c);
+        Matrix3f I = new Matrix3f();
+        I.setIdentity();
+        u.add(I);//I + u
+        u2.mul(coeff);//u*c
+        u.add(u2);//u+u2
 
-        R[1][0] = 0 + v.z + scale * (v.x * v.y);
-        R[1][1] = 1 + 0 + scale * (-v.z*v.z-v.x*v.x);
-        R[1][2] = 0 + (-v.x) + scale * (v.y * v.z);
-
-        R[2][0] = 0 + (-v.y) + scale * (v.x * v.z);
-        R[2][1] = 0 + v.x + scale * (v.y * v.z);
-        R[2][2] = 1 + 0 + scale * (-v.y*v.y-v.x*v.x);
-        return R;
+        return u;
     }
 
-    public Vector3 getTransformedCoordinates(double[][] matrix, Vector3 vec){
-        float x = (float) (matrix[0][0]*vec.x + matrix[0][1]*vec.y + matrix[0][2]*vec.z);
-        float y = (float) (matrix[1][0]*vec.x + matrix[1][1]*vec.y + matrix[1][2]*vec.z);
-        float z = (float) (matrix[2][0]*vec.x + matrix[2][1]*vec.y + matrix[2][2]*vec.z);
+    public Vector3 getTransformedCoordinates_new(Matrix4f R, Vector3 vec) {
+//        float x = R[0]*vec.x + R[4]*vec.y + R[8]*vec.z + R[12];
+//        float y = R[1]*vec.x + R[5]*vec.y + R[8]*vec.z + R[13];
+//        float z = R[2]*vec.x + R[6]*vec.y + R[10]*vec.z + R[14];
+//        float x = R[0]*vec.x + R[1]*vec.y + R[2]*vec.z + R[12];
+//        float y = R[3]*vec.x + R[4]*vec.y + R[5]*vec.z + R[13];
+//        float z = R[6]*vec.x + R[7]*vec.y + R[8]*vec.z + R[14];
+        float x = R.m00 * vec.x + R.m01 * vec.y + R.m02 * vec.z + R.m03;
+        float y = R.m10 * vec.x + R.m11 * vec.y + R.m12 * vec.z + R.m13;
+        float z = R.m20 * vec.x + R.m21 * vec.y + R.m22 * vec.z + R.m23;
+        Vector3 res = new Vector3(x, y, z);
+
+
+        return res;
+    }
+
+//    public double[][] getTransformationMatrix(Vector3 vec1, Vector3 vec2){
+//
+//        Vector3 v = Vector3.cross(vec1, vec2);
+//        float s = (float) Math.sqrt(v.x*v.x + v.y*v.y + v.z*v.z);
+//        float c = Vector3.dot(vec1, vec2);
+//        float scale = (float) 1/(1+c);//(1-c)/(s*s);
+//
+//        Matrix3d vx = new Matrix3d(0, -v.z, v.y, v.z, 0, -v.x, -v.y, v.x, 0);
+//        Matrix3d eye = new Matrix3d(1,0,0,0,1,0,0,0,1);
+//        Matrix3d vx2 = new Matrix3d();
+//        vx2.mul(vx,vx);
+//        vx2.mul(scale);
+//        vx.add(vx2);
+//        Matrix3d rotationMatrix = new Matrix3d();
+//        rotationMatrix.add(eye, vx);
+//
+//        double[][] R = new double[3][3];
+//        R[0][0] = 1 + 0 + scale * (-v.z*v.z-v.y*v.y);
+//        R[0][1] = 0 + (-v.z) + scale * (v.x * v.y);
+//        R[0][2] = 0 + v.y + scale * (v.x * v.z);
+//
+//        R[1][0] = 0 + v.z + scale * (v.x * v.y);
+//        R[1][1] = 1 + 0 + scale * (-v.z*v.z-v.x*v.x);
+//        R[1][2] = 0 + (-v.x) + scale * (v.y * v.z);
+//
+//        R[2][0] = 0 + (-v.y) + scale * (v.x * v.z);
+//        R[2][1] = 0 + v.x + scale * (v.y * v.z);
+//        R[2][2] = 1 + 0 + scale * (-v.y*v.y-v.x*v.x);
+//        return R;
+//    }
+
+    public Vector3 getTransformedCoordinates(Matrix3f R, Vector3 vec){
+//        float x = (float) (matrix[0][0]*vec.x + matrix[0][1]*vec.y + matrix[0][2]*vec.z);
+//        float y = (float) (matrix[1][0]*vec.x + matrix[1][1]*vec.y + matrix[1][2]*vec.z);
+//        float z = (float) (matrix[2][0]*vec.x + matrix[2][1]*vec.y + matrix[2][2]*vec.z);
 //        Vector3d v1 = new Vector3d();
 //        Vector3d v2 = new Vector3d();
 //        Vector3d v3 = new Vector3d();
@@ -925,9 +1023,22 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 //        float x = (float) v1.dot(v);
 //        float y = (float) v2.dot(v);
 //        float z = (float) v3.dot(v);
-        Vector3 vec_transf = new Vector3(x, y, z);
+        Vector3f source = new Vector3f(vec.x, vec.y, vec.z);
+        Vector3f row1 = new Vector3f();
+        Vector3f row2 = new Vector3f();
+        Vector3f row3 = new Vector3f();
+        R.getRow(0, row1);
+        R.getRow(1, row2);
+        R.getRow(2, row3);
+//        Vector3f result = new Vector3f();
+
+
+        Vector3 vec_transf = new Vector3(row1.dot(source),row2.dot(source),row3.dot(source));
         return vec_transf;
     }
+
+
+
 
     public void checkButton(View v){
         int radioId = radioGroup.getCheckedRadioButtonId();
