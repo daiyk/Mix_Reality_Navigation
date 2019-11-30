@@ -302,7 +302,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 
                 ArrayList<Node> nodelist = anchorMap.getNodeList();
                 ArrayList<String> anchorlist = new ArrayList<String>();
-
+                backButton.setVisibility(View.GONE);
                 int n = 0;
                 while (n < nodelist.size()) {
                     anchorlist.add(nodelist.get(n).AnchorName);
@@ -316,13 +316,12 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 
 
                 runOnUiThread(() -> {
-                    actionButton.setText("Select Start Point");
-                    statusText.setText("");
+                    actionButton.setVisibility(View.GONE);
+                    statusText.setText("Select Start Point");
 
-                    radioGroup.setVisibility(View.INVISIBLE);
-                    textView.setVisibility(View.INVISIBLE);
+//                    textView.setVisibility(View.INVISIBLE);
                     navigateButton.setVisibility(View.VISIBLE);
-                    navigateButton.setText("choose where you are");
+                    navigateButton.setText("Confirm");
                     spinner.setVisibility(View.VISIBLE);
                 });
                 break;
@@ -826,6 +825,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                 actionButton.setVisibility(View.VISIBLE);
                 statusText.setText("Map Loaded. Start Navigation");
                 // Permission has already been granted
+                advanceDemo();
 
             }
         } else {
