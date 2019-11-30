@@ -2,6 +2,8 @@ package com.microsoft.sampleandroid;
 
 import android.os.Environment;
 import android.util.Log;
+
+import com.google.ar.core.Pose;
 import com.google.ar.sceneform.math.Vector3;
 
 import java.io.File;
@@ -74,8 +76,7 @@ public final class FileManager {
             ArrayList<ArrayList<Integer>> adj_list = map.getAdjList();
             ArrayList<com.microsoft.sampleandroid.Node> nodeList = map.getNodeList();
             Map<String,Integer> nodeIdPair = map.getNodeIdPair();
-            Map<String,Vector3> transfVec = map.getTransfVec();
-            Map<Integer,Vector3> posList = map.getPosList();
+            Map<Integer,Float[]> posList = map.getPosList();
 
             //build xml document class
             DocumentBuilderFactory documentFactory = DocumentBuilderFactory.newInstance();
@@ -150,68 +151,46 @@ public final class FileManager {
                 }
             }
 
-            //**Loop over transf and Write to XML */
-            Element transf_vec = document.createElement("Transformation");
-            root.appendChild(transf_vec);
-            for (Map.Entry<String, Vector3> entry : transfVec.entrySet()) {
-                Element pair = document.createElement("pair");
-                Attr key = document.createAttribute("key");
-                key.setValue(entry.getKey());
-                pair.setAttributeNode(key);
-
-                Element x = document.createElement("x");
-                x.appendChild(document.createTextNode(String.valueOf(entry.getValue().x)));
-                pair.appendChild(x);
-
-                Element y = document.createElement("y");
-                y.appendChild(document.createTextNode(String.valueOf(entry.getValue().y)));
-                pair.appendChild(y);
-
-                Element z = document.createElement("z");
-                z.appendChild(document.createTextNode(String.valueOf(entry.getValue().z)));
-                pair.appendChild(z);
-
-                transf_vec.appendChild(pair);
-
-            }
-
             //**Loop over pos and Write to XML */
             Element pos = document.createElement("Pos");
             root.appendChild(pos);
-            for (Map.Entry<Integer, Vector3> entry : posList.entrySet()) {
+            for (Map.Entry<Integer, Float[]> entry : posList.entrySet()) {
                 Element pair = document.createElement("pair");
                 Attr key = document.createAttribute("key");
                 key.setValue(String.valueOf(entry.getKey()));
                 pair.setAttributeNode(key);
 
                 Element x = document.createElement("x");
-                x.appendChild(document.createTextNode(String.valueOf(entry.getValue().x)));
+                x.appendChild(document.createTextNode(String.valueOf(entry.getValue()[0])));
                 pair.appendChild(x);
 
                 Element y = document.createElement("y");
-                y.appendChild(document.createTextNode(String.valueOf(entry.getValue().y)));
+                y.appendChild(document.createTextNode(String.valueOf(entry.getValue()[1])));
                 pair.appendChild(y);
 
                 Element z = document.createElement("z");
-                z.appendChild(document.createTextNode(String.valueOf(entry.getValue().z)));
+                z.appendChild(document.createTextNode(String.valueOf(entry.getValue()[2])));
                 pair.appendChild(z);
 
+                Element rx = document.createElement("rx");
+                rx.appendChild(document.createTextNode(String.valueOf(entry.getValue()[3])));
+                pair.appendChild(rx);
+
+                Element ry = document.createElement("ry");
+                ry.appendChild(document.createTextNode(String.valueOf(entry.getValue()[4])));
+                pair.appendChild(ry);
+
+                Element rz = document.createElement("rz");
+                rz.appendChild(document.createTextNode(String.valueOf(entry.getValue()[5])));
+                pair.appendChild(rz);
+
+                Element rw = document.createElement("rw");
+                rw.appendChild(document.createTextNode(String.valueOf(entry.getValue()[6])));
+                pair.appendChild(rw);
                 pos.appendChild(pair);
 
             }
-            //**Loop over NodeID pairs and Write to XML */
-//            Element hashPair = document.createElement("HashPair");
-//            root.appendChild(hashPair);
-//            for (Map.Entry<String, Integer> entry : nodeIdPair.entrySet()) {
-//                Element pair = document.createElement("pair");
-//                Attr key = document.createAttribute("key");
-//                key.setValue(entry.getKey());
-//                pair.setAttributeNode(key);
-//                pair.appendChild(document.createTextNode(String.valueOf(entry.getValue())));
-//
-//                hashPair.appendChild(pair);
-//
-//            }
+
             //create the xml file
             //transform the DOM Object to an XML File
             try {
@@ -299,58 +278,7 @@ public final class FileManager {
 
             }
 
-            //loop to read transformation vectors
-            Node transformation = root.getElementsByTagName("Transformation").item(0);
-            if(graph.getNodeType() == Node.ELEMENT_NODE)
-            {
-                Element eTransfVec = (Element)transformation;
-                NodeList transfVec = eTransfVec.getElementsByTagName("pair");
-                for(int item = 0; item<transfVec.getLength();item++)
-                {
-                    Node pair = transfVec.item(item);
-                    if(pair.getNodeType()==Node.ELEMENT_NODE)
-                    {
-                        Element eVec = (Element)pair;
-                        String key = eVec.getAttribute("key");
-
-                        //find the corresponding start node and end node in the key
-                        String key1=new String();
-                        String key2=new String();
-                        String tempKey="";
-                        for(int i = 0; i < key.length(); i++)
-                        {
-                            if(String.valueOf(key.charAt(i)).equals("_"))
-                            {
-                                key1 = tempKey;
-                                tempKey="";
-                            }
-                            else if(key.endsWith(String.valueOf(key.charAt(i))))
-                            {
-                                tempKey = tempKey+key.charAt(i);
-                                key2 = tempKey;
-                                break;
-                            }
-                            else
-                                tempKey = tempKey+key.charAt(i);
-                        }
-                        //loop over x,y,z
-                        Node node_x = eVec.getElementsByTagName("x").item(0);
-                        Float x = Float.valueOf(node_x.getTextContent());
-
-                        Node node_y = eVec.getElementsByTagName("y").item(0);
-                        Float y = Float.valueOf(node_y.getTextContent());
-
-                        Node node_z = eVec.getElementsByTagName("z").item(0);
-                        Float z = Float.valueOf(node_z.getTextContent());
-
-                        Vector3 vec = new Vector3(x,y,z);
-
-                        map.updateTransf(Integer.parseInt(key1), Integer.parseInt(key2), vec);
-                    }
-                }
-            }
-
-            //loop to read pos vectors
+            //loop to read pos element
             Node pos = root.getElementsByTagName("Pos").item(0);
             if(pos.getNodeType() == Node.ELEMENT_NODE)
             {
@@ -364,21 +292,32 @@ public final class FileManager {
                         Element eVec = (Element)pair;
                         String key = eVec.getAttribute("key");
                         Integer idx = Integer.parseInt(key);
-                        //find the corresponding start node and end node in the key
+
+                        Float[] this_pos = new Float[7];
 
                         //loop over x,y,z
                         Node node_x = eVec.getElementsByTagName("x").item(0);
-                        Float x = Float.valueOf(node_x.getTextContent());
+                        this_pos[0] = Float.valueOf(node_x.getTextContent());
 
                         Node node_y = eVec.getElementsByTagName("y").item(0);
-                        Float y = Float.valueOf(node_y.getTextContent());
+                        this_pos[1] = Float.valueOf(node_y.getTextContent());
 
                         Node node_z = eVec.getElementsByTagName("z").item(0);
-                        Float z = Float.valueOf(node_z.getTextContent());
+                        this_pos[2] = Float.valueOf(node_z.getTextContent());
 
-                        Vector3 vec = new Vector3(x,y,z);
+                        Node node_rx = eVec.getElementsByTagName("rx").item(0);
+                        this_pos[3] = Float.valueOf(node_rx.getTextContent());
 
-                        map.updatePos(idx,vec);
+                        Node node_ry = eVec.getElementsByTagName("ry").item(0);
+                        this_pos[4] = Float.valueOf(node_ry.getTextContent());
+
+                        Node node_rz = eVec.getElementsByTagName("rz").item(0);
+                        this_pos[5] = Float.valueOf(node_rz.getTextContent());
+
+                        Node node_rw = eVec.getElementsByTagName("rw").item(0);
+                        this_pos[6] = Float.valueOf(node_rw.getTextContent());
+
+                        map.addPos(idx,this_pos);
 
                     }
                 }
@@ -389,38 +328,6 @@ public final class FileManager {
         }
         return map;
     }
-
-
-//    public void writeNewPose(long currTime, float[] camTrans, float[] camRot){
-//
-//        String str_line = String.format("%1$07d %2$13f %3$13f %4$13f %5$13f %6$13f %7$13f %8$13f",
-//                currTime, camTrans[0], camTrans[1], camTrans[2], camRot[0], camRot[1], camRot[2],
-//                camRot[3]);
-//        poseTextFile += str_line + "\n";
-//    }
-
-    // public String savePose() {
-    //     if (isExternalStorageWritable()) {
-    //         try {
-    //             myOutputStreamWriter.write(poseTextFile);
-    //             myOutputStreamWriter.close();
-    //             myFileOutputStream.flush();
-    //             myFileOutputStream.close();
-    //             return "file saved";
-    //         } catch (FileNotFoundException e) {
-    //             e.printStackTrace();
-    //             return "File not found";
-    //         } catch (IOException e) {
-    //             e.printStackTrace();
-    //             return "Error saving";
-    //         } catch (Throwable t) {
-    //             return "Exception: " + t.toString();
-    //         }
-    //     } else {
-    //         Log.e(TAG, "External storage not available to store data!!");
-    //     }
-    //     return "Error in FileManager.savePose()";
-    // }
 
 
     private void createDirectory(){
@@ -450,3 +357,126 @@ public final class FileManager {
      }
 
 }
+
+
+
+//    //**Loop over transf and Write to XML */
+//    Element transf_vec = document.createElement("Transformation");
+//            root.appendChild(transf_vec);
+//                    for (Map.Entry<String, Vector3> entry : transfVec.entrySet()) {
+//        Element pair = document.createElement("pair");
+//        Attr key = document.createAttribute("key");
+//        key.setValue(entry.getKey());
+//        pair.setAttributeNode(key);
+//
+//        Element x = document.createElement("x");
+//        x.appendChild(document.createTextNode(String.valueOf(entry.getValue().x)));
+//        pair.appendChild(x);
+//
+//        Element y = document.createElement("y");
+//        y.appendChild(document.createTextNode(String.valueOf(entry.getValue().y)));
+//        pair.appendChild(y);
+//
+//        Element z = document.createElement("z");
+//        z.appendChild(document.createTextNode(String.valueOf(entry.getValue().z)));
+//        pair.appendChild(z);
+//
+//        transf_vec.appendChild(pair);
+//
+//        }
+
+    //loop to read transformation vectors
+//    Node transformation = root.getElementsByTagName("Transformation").item(0);
+//            if(graph.getNodeType() == Node.ELEMENT_NODE)
+//                    {
+//                    Element eTransfVec = (Element)transformation;
+//                    NodeList transfVec = eTransfVec.getElementsByTagName("pair");
+//                    for(int item = 0; item<transfVec.getLength();item++)
+//        {
+//        Node pair = transfVec.item(item);
+//        if(pair.getNodeType()==Node.ELEMENT_NODE)
+//        {
+//        Element eVec = (Element)pair;
+//        String key = eVec.getAttribute("key");
+//
+//        //find the corresponding start node and end node in the key
+//        String key1=new String();
+//        String key2=new String();
+//        String tempKey="";
+//        for(int i = 0; i < key.length(); i++)
+//        {
+//        if(String.valueOf(key.charAt(i)).equals("_"))
+//        {
+//        key1 = tempKey;
+//        tempKey="";
+//        }
+//        else if(key.endsWith(String.valueOf(key.charAt(i))))
+//        {
+//        tempKey = tempKey+key.charAt(i);
+//        key2 = tempKey;
+//        break;
+//        }
+//        else
+//        tempKey = tempKey+key.charAt(i);
+//        }
+//        //loop over x,y,z
+//        Node node_x = eVec.getElementsByTagName("x").item(0);
+//        Float x = Float.valueOf(node_x.getTextContent());
+//
+//        Node node_y = eVec.getElementsByTagName("y").item(0);
+//        Float y = Float.valueOf(node_y.getTextContent());
+//
+//        Node node_z = eVec.getElementsByTagName("z").item(0);
+//        Float z = Float.valueOf(node_z.getTextContent());
+//
+//        Vector3 vec = new Vector3(x,y,z);
+//
+//        map.updateTransf(Integer.parseInt(key1), Integer.parseInt(key2), vec);
+//        }
+//        }
+//        }
+
+//**Loop over NodeID pairs and Write to XML */
+//            Element hashPair = document.createElement("HashPair");
+//            root.appendChild(hashPair);
+//            for (Map.Entry<String, Integer> entry : nodeIdPair.entrySet()) {
+//                Element pair = document.createElement("pair");
+//                Attr key = document.createAttribute("key");
+//                key.setValue(entry.getKey());
+//                pair.setAttributeNode(key);
+//                pair.appendChild(document.createTextNode(String.valueOf(entry.getValue())));
+//
+//                hashPair.appendChild(pair);
+//
+//            }
+
+//    public void writeNewPose(long currTime, float[] camTrans, float[] camRot){
+//
+//        String str_line = String.format("%1$07d %2$13f %3$13f %4$13f %5$13f %6$13f %7$13f %8$13f",
+//                currTime, camTrans[0], camTrans[1], camTrans[2], camRot[0], camRot[1], camRot[2],
+//                camRot[3]);
+//        poseTextFile += str_line + "\n";
+//    }
+
+// public String savePose() {
+//     if (isExternalStorageWritable()) {
+//         try {
+//             myOutputStreamWriter.write(poseTextFile);
+//             myOutputStreamWriter.close();
+//             myFileOutputStream.flush();
+//             myFileOutputStream.close();
+//             return "file saved";
+//         } catch (FileNotFoundException e) {
+//             e.printStackTrace();
+//             return "File not found";
+//         } catch (IOException e) {
+//             e.printStackTrace();
+//             return "Error saving";
+//         } catch (Throwable t) {
+//             return "Exception: " + t.toString();
+//         }
+//     } else {
+//         Log.e(TAG, "External storage not available to store data!!");
+//     }
+//     return "Error in FileManager.savePose()";
+// }

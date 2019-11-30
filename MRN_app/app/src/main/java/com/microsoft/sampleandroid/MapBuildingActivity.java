@@ -12,10 +12,6 @@ import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.RadioButton;
-import android.widget.RadioGroup;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -48,12 +44,8 @@ import java.text.DecimalFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
@@ -73,9 +65,9 @@ public class MapBuildingActivity extends AppCompatActivity
     private final Object renderLock = new Object();
     private int saveCount = 0;
     private int anchorFound = 0;
-
     private boolean finish = false;
-
+    private Vector3 lastAnchorPos = new Vector3();
+    float anchorBoardScale = 0.5f;
     // Materials
     private static Material failedColor;
     private static Material foundColor;
@@ -317,6 +309,7 @@ public class MapBuildingActivity extends AppCompatActivity
                     file.saveMap("test",Map);
                     currentDemoStep = DemoStep.End;
                     Toast.makeText(this, "save map",Toast.LENGTH_LONG).show();
+                    advanceDemo();
                     // Permission has already been granted
                 }
                 break;
@@ -356,10 +349,13 @@ public class MapBuildingActivity extends AppCompatActivity
 
         AnchorVisual visual = anchorVisuals.get("");
 
+        //pos of the last anchor, which is used to compute transformation
         AnchorNames.add(String.format("Anchor %d", saveCount - 1));
         addToMap(AnchorNames ,anchorID, NodeType.Major);
 
-        //储存完毕并且把anchor删除
+        lastAnchorPos = visual.getAnchorNode().getWorldPosition();
+
+        //储存完毕并且把临时anchor删除
         visual.setColor(savedColor);
         anchorVisuals.put(anchorID, visual);
         anchorVisuals.remove("");
@@ -503,9 +499,9 @@ public class MapBuildingActivity extends AppCompatActivity
         foundVisual.setColor(foundColor);
 
         String anchorName = String.format("Anchor %d",++anchorFound);
-        float anchorscale = 0.5f;
+
         anchorNamesIdentifier.put(anchorName,cloudAnchorIdentifier);
-        Vector3 localPos = new Vector3(0.0f, anchorscale * 0.55f, 0.0f);
+        Vector3 localPos = new Vector3(0.0f, anchorBoardScale * 0.55f, 0.0f);
         AnchorBoard anchorBoard = new AnchorBoard(this, anchorName,0.5f,localPos);
         anchorBoard.setParent(foundVisual.getAnchorNode());
 
@@ -573,8 +569,10 @@ public class MapBuildingActivity extends AppCompatActivity
             Map.addNode((String) AnchorNames.get(AnchorNames.size()-1), AnchorID, AnchorType);
         }
         else{
+            //"" is the current located anchor
+            Vector3 pos1 = anchorVisuals.get("").getAnchorNode().getWorldPosition();
             Map.addNode((String) AnchorNames.get(AnchorNames.size()-1), AnchorID, AnchorType);
-            Map.addEdge((String) AnchorNames.get(AnchorNames.size()-1),(String) AnchorNames.get(AnchorNames.size()-2));
+            Map.addEdge((String) AnchorNames.get(AnchorNames.size()-1),(String) AnchorNames.get(AnchorNames.size()-2),pos1,lastAnchorPos);
         }
     }
 
