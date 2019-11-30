@@ -19,6 +19,7 @@ import com.google.ar.core.Anchor;
 import com.google.ar.core.Camera;
 import com.google.ar.core.HitResult;
 import com.google.ar.core.Plane;
+import com.google.ar.core.Pose;
 import com.google.ar.sceneform.ArSceneView;
 import com.google.ar.sceneform.HitTestResult;
 import com.google.ar.sceneform.Node;
@@ -49,6 +50,8 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 
+import javax.vecmath.Vector3d;
+
 public class MapBuildingActivity extends AppCompatActivity
 {
     private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 100;
@@ -67,7 +70,8 @@ public class MapBuildingActivity extends AppCompatActivity
     private int anchorFound = 0;
     private boolean finish = false;
     private Vector3 lastAnchorPos = new Vector3();
-    float anchorBoardScale = 0.5f;
+    private Pose lastAnchorPose;
+
     // Materials
     private static Material failedColor;
     private static Material foundColor;
@@ -83,7 +87,7 @@ public class MapBuildingActivity extends AppCompatActivity
     private TextView statusText;
 
     private Button finishButton;
-    private AnchorMap Map;
+    private AnchorMap anchorMap;
     private List<String> AnchorNames = new ArrayList<String>();
 
     private String targetName = null;
@@ -128,7 +132,7 @@ public class MapBuildingActivity extends AppCompatActivity
         finishButton = findViewById(R.id.finishButton);
         finishButton.setOnClickListener((View v) -> onClick());
 
-        Map = new AnchorMap();
+        anchorMap = new AnchorMap();
 
 
 
@@ -230,63 +234,6 @@ public class MapBuildingActivity extends AppCompatActivity
 
                 break;
 
-            case CreateSessionForQuery:
-                cloudAnchorManager.stop();
-                cloudAnchorManager.reset();
-                clearVisuals();
-
-                runOnUiThread(() -> {
-                    statusText.setText("");
-                    actionButton.setText("Locate anchor");
-                });
-
-                currentDemoStep = DemoStep.LookForAnchor;
-
-                break;
-
-            case LookForAnchor:
-                // We need to restart the session to find anchors we created.
-                startNewSession();
-
-                AnchorLocateCriteria criteria = new AnchorLocateCriteria();
-                //criteria.setBypassCache(true);
-                //不规定而是找到最近的anchor
-                //String EMPTY_STRING = "";
-                criteria.setIdentifiers(new String[]{anchorID});
-
-                // Cannot run more than one watcher concurrently
-                stopWatcher();
-
-                cloudAnchorManager.startLocating(criteria);
-
-                runOnUiThread(() -> {
-                    actionButton.setVisibility(View.INVISIBLE);
-                    statusText.setText("Look for anchor");
-                });
-
-                break;
-
-            case LookForNearbyAnchors:
-                if (anchorVisuals.isEmpty() || !anchorVisuals.containsKey(anchorID)){
-                    runOnUiThread(() -> statusText.setText("Cannot locate nearby. Previous anchor not yet located."));
-                    break;
-                }
-
-                AnchorLocateCriteria nearbyLocateCriteria = new AnchorLocateCriteria();
-                NearAnchorCriteria nearAnchorCriteria = new NearAnchorCriteria();
-                nearAnchorCriteria.setDistanceInMeters(10);
-                nearAnchorCriteria.setSourceAnchor(anchorVisuals.get(anchorID).getCloudAnchor());
-                nearbyLocateCriteria.setNearAnchor(nearAnchorCriteria);
-                // Cannot run more than one watcher concurrently
-                stopWatcher();
-                cloudAnchorManager.startLocating(nearbyLocateCriteria);
-                runOnUiThread(() -> {
-                    actionButton.setVisibility(View.INVISIBLE);
-                    statusText.setText("Locating...");
-                });
-
-                break;
-
             case SaveMap:
                 if (ContextCompat.checkSelfPermission(this,
                         Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -295,27 +242,27 @@ public class MapBuildingActivity extends AppCompatActivity
                     // Permission is not granted
                     // Should we show an explanation?
 
-                        // No explanation needed; request the permission
+                    // No explanation needed; request the permission
                     ActivityCompat.requestPermissions(this,
                             new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                             MY_PERMISSIONS_REQUEST_READ_CONTACTS);
 
-                        // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
-                        // app-defined int constant. The callback method gets the
-                        // result of the request.
+                    // MY_PERMISSIONS_REQUEST_READ_CONTACTS is an
+                    // app-defined int constant. The callback method gets the
+                    // result of the request.
 
                 } else {
                     FileManager file = new FileManager();
-                    file.saveMap("test",Map);
+                    file.saveMap("test",anchorMap);
                     currentDemoStep = DemoStep.End;
                     Toast.makeText(this, "save map",Toast.LENGTH_LONG).show();
-                    advanceDemo();
                     // Permission has already been granted
+                    runOnUiThread(() -> {
+                        statusText.setText("");
+                        backButton.setVisibility(View.VISIBLE);
+                    });
                 }
                 break;
-
-
-
 
             case End:
                 for (AnchorVisual toDeleteVisual : anchorVisuals.values()) {
@@ -349,11 +296,17 @@ public class MapBuildingActivity extends AppCompatActivity
 
         AnchorVisual visual = anchorVisuals.get("");
 
+        Pose pose_visual = visual.getLocalAnchor().getPose();
+//        Pose inv_pose_viusal = pose_visual.inverse();
+//        float[] inv_rotationMatrix_coord1 = new float[16];
+//        inv_pose_viusal.toMatrix(inv_rotationMatrix_coord1,0);
+//        anchorMap.addMatrix(anchorname, inv_rotationMatrix_coord1);
+
         //pos of the last anchor, which is used to compute transformation
         AnchorNames.add(String.format("Anchor %d", saveCount - 1));
         addToMap(AnchorNames ,anchorID, NodeType.Major);
-
         lastAnchorPos = visual.getAnchorNode().getWorldPosition();
+        lastAnchorPose = visual.getLocalAnchor().getPose();
 
         //储存完毕并且把临时anchor删除
         visual.setColor(savedColor);
@@ -362,8 +315,8 @@ public class MapBuildingActivity extends AppCompatActivity
 
         runOnUiThread(() -> {
             statusText.setText("");
-            //actionButton.setVisibility(View.VISIBLE);
             finishButton.setVisibility(View.VISIBLE);
+            //actionButton.setVisibility(View.VISIBLE);
         });
 
         // Need to create more anchors for nearby demo
@@ -417,46 +370,7 @@ public class MapBuildingActivity extends AppCompatActivity
         clearVisuals();
     }
 
-    private void onAnchorLocated(AnchorLocatedEvent event) {
-        LocateAnchorStatus status = event.getStatus();
-
-        runOnUiThread(() -> {
-            switch (status) {
-                case AlreadyTracked:
-                    break;
-
-                case Located:
-                    renderLocatedAnchor(event.getAnchor());
-                    break;
-
-                case NotLocatedAnchorDoesNotExist:
-                    statusText.setText("Anchor does not exist");
-                    break;
-            }
-        });
-    }
-
     // 当criteria定义的寻找目标全部完成时调用，不然一直调用onAnchorLocated（）
-    private void onLocateAnchorsCompleted(LocateAnchorsCompletedEvent event) {
-        runOnUiThread(() -> statusText.setText("Source Anchor located!"));
-
-        if (!basicDemo && currentDemoStep == DemoStep.LookForAnchor) {
-            runOnUiThread(() -> {
-                actionButton.setVisibility(View.VISIBLE);
-                actionButton.setText("Look for anchors nearby");
-            });
-            currentDemoStep = DemoStep.LookForNearbyAnchors;
-        } else {
-            stopWatcher();
-            runOnUiThread(() -> {
-                actionButton.setVisibility(View.VISIBLE);
-                //actionButton.setText("Cleanup anchors");
-                actionButton.setText("Start Navigation");
-            });
-            // t.b.d
-            currentDemoStep = DemoStep.SaveMap;
-        }
-    }
 
     private void onSessionUpdated(SessionUpdatedEvent args) {
         float progress = args.getStatus().getRecommendedForCreateProgress();
@@ -486,33 +400,6 @@ public class MapBuildingActivity extends AppCompatActivity
         if (currentDemoStep == DemoStep.CreateLocalAnchor) {
             createAnchor(hitResult);
         }
-    }
-
-    private void renderLocatedAnchor(CloudSpatialAnchor anchor) {
-        AnchorVisual foundVisual = new AnchorVisual(anchor.getLocalAnchor());
-        foundVisual.setCloudAnchor(anchor);
-        foundVisual.getAnchorNode().setParent(arFragment.getArSceneView().getScene());
-
-
-        String cloudAnchorIdentifier = foundVisual.getCloudAnchor().getIdentifier();
-        //statusText.setText(String.format("cloud Anchor Identifier: %s",cloudAnchorIdentifier));
-        foundVisual.setColor(foundColor);
-
-        String anchorName = String.format("Anchor %d",++anchorFound);
-
-        anchorNamesIdentifier.put(anchorName,cloudAnchorIdentifier);
-        Vector3 localPos = new Vector3(0.0f, anchorBoardScale * 0.55f, 0.0f);
-        AnchorBoard anchorBoard = new AnchorBoard(this, anchorName,0.5f,localPos);
-        anchorBoard.setParent(foundVisual.getAnchorNode());
-
-        foundVisual.render(arFragment);
-
-        //record anchors with its name as key
-//        if(currentDemoStep == DemoStep.LookForAnchor) {
-//            anchorID = anchorName;
-//        }
-        anchorVisuals.put(cloudAnchorIdentifier, foundVisual);
-
     }
 
     private void setupLocalCloudAnchor(AnchorVisual visual) {
@@ -545,8 +432,8 @@ public class MapBuildingActivity extends AppCompatActivity
         destroySession();
 
         cloudAnchorManager = new AzureSpatialAnchorsManager(sceneView.getSession());
-        cloudAnchorManager.addAnchorLocatedListener(this::onAnchorLocated);
-        cloudAnchorManager.addLocateAnchorsCompletedListener(this::onLocateAnchorsCompleted);
+//        cloudAnchorManager.addAnchorLocatedListener(this::onAnchorLocated);
+//        cloudAnchorManager.addLocateAnchorsCompletedListener(this::onLocateAnchorsCompleted);
         cloudAnchorManager.addSessionUpdatedListener(this::onSessionUpdated);
         cloudAnchorManager.start();
     }
@@ -560,19 +447,27 @@ public class MapBuildingActivity extends AppCompatActivity
     private void onClick(){
         finish = true;
         finishButton.setVisibility(View.GONE);
+        // connect the first and last anchor
+
+        anchorMap.addEdge((String) AnchorNames.get(AnchorNames.size()-1),
+                (String) AnchorNames.get(0));
+
         currentDemoStep = DemoStep.SaveMap;
         advanceDemo();
     }
 
     private void addToMap(List AnchorNames, String AnchorID, NodeType AnchorType){
         if (AnchorNames.size() == 1){
-            Map.addNode((String) AnchorNames.get(AnchorNames.size()-1), AnchorID, AnchorType);
+            Pose pose_last = anchorVisuals.get("").getLocalAnchor().getPose();
+            anchorMap.addNode((String) AnchorNames.get(AnchorNames.size()-1), AnchorID, pose_last, AnchorType);
         }
         else{
             //"" is the current located anchor
-            Vector3 pos1 = anchorVisuals.get("").getAnchorNode().getWorldPosition();
-            Map.addNode((String) AnchorNames.get(AnchorNames.size()-1), AnchorID, AnchorType);
-            Map.addEdge((String) AnchorNames.get(AnchorNames.size()-1),(String) AnchorNames.get(AnchorNames.size()-2),pos1,lastAnchorPos);
+            Pose pose_last = anchorVisuals.get("").getLocalAnchor().getPose();
+            anchorMap.addNode((String) AnchorNames.get(AnchorNames.size()-1), AnchorID, pose_last,AnchorType);
+            anchorMap.addEdge((String) AnchorNames.get(AnchorNames.size()-1),
+                    (String) AnchorNames.get(AnchorNames.size()-2));
+
         }
     }
 
@@ -606,9 +501,6 @@ public class MapBuildingActivity extends AppCompatActivity
         CreateAnotherLocalAnchor,
         SaveCloudAnchor,        ///< the session will save the cloud anchor
         SavingCloudAnchor,      ///< the session is in the process of saving the cloud anchor
-        CreateSessionForQuery,  ///< a session will be created to query for an anchor
-        LookForAnchor,          ///< the session will run the query
-        LookForNearbyAnchors,   ///< the session will run a query for nearby anchors
         SaveMap,                ///< save the map after dropping and uploading all the anchors
         End,                            ///< the end of the demo
         Restart,                        ///< waiting to restart
