@@ -28,6 +28,13 @@
             android:textAllCaps="false"
             android:onClick = "exitDemoClicked"/>
 
+        <Spinner
+            android:id="@+id/spinner_branch"
+            android:layout_below="@+id/backButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:visibility="gone"/>
+
         <TextView
             android:id="@+id/statusText"
             android:layout_width="wrap_content"
@@ -56,16 +63,62 @@
             android:text=""
             android:textAllCaps="false" />
 
-        <Button
-            android:id="@+id/finishButton"
+        <LinearLayout
+            android:id="@+id/linearLayout_buttons"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_above="@+id/actionButton"
             android:layout_alignParentEnd="true"
-            android:layout_marginBottom="20dp"
-            android:text="Finish mapping"
-            android:textAllCaps="false"
-            android:visibility="gone" />
+            android:layout_alignEnd="@id/actionButton"
+            android:layout_marginBottom="0dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <Button
+                android:id="@+id/newBranchButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="New Branch" />
+
+            <Button
+                android:id="@+id/finishButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Finish mapping"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/linearLayout_input"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentStart="true"
+            android:layout_alignParentTop="true"
+            android:layout_marginStart="70dp"
+            android:layout_marginTop="180dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/textView2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Give a Name for Major Node, nothing for Minor Code" />
+
+            <EditText
+                android:id="@+id/editText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:inputType="textPersonName"
+                android:text="Name" />
+
+            <Button
+                android:id="@+id/submitButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Submit" />
+        </LinearLayout>
 
     </RelativeLayout>
 </merge>

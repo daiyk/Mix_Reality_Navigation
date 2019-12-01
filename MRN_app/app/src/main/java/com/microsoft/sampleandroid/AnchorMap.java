@@ -9,6 +9,8 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+
+import com.google.ar.core.Pose;
 import com.google.ar.sceneform.math.Vector3;
 
 public class AnchorMap {
@@ -17,8 +19,7 @@ public class AnchorMap {
     private HashMap<String,Integer> mapping = new HashMap<>();
     private ArrayList<ArrayList<Integer>> adjacencyList = new ArrayList<ArrayList<Integer>>();
     private ArrayList<Node> NodeList = new ArrayList<>();
-    private HashMap<String,Vector3> transf = new HashMap<>();
-    private HashMap<Integer,Vector3> anchorPos = new HashMap<>();
+    private HashMap<Integer,Float[]> anchorPos = new HashMap<>();
 
     //CONSTRUCTOR
     public AnchorMap(){
@@ -40,10 +41,8 @@ public class AnchorMap {
     //METHOD: return adjacency list
     public ArrayList<ArrayList<Integer>> getAdjList() { return this.adjacencyList; }
 
-    //METHOD: return transformation vectors
-    public Map<String,Vector3> getTransfVec() { return this.transf; }
-
-    public Map<Integer,Vector3> getPosList() { return this.anchorPos; }
+    //METHOD: return pose list
+    public Map<Integer,Float[]> getPosList() { return this.anchorPos; }
 
     //METHOD: add node
     //AnchorName: user-defined anchorname
@@ -79,41 +78,59 @@ public class AnchorMap {
         }
     }
 
-    //METHOD: add edge between two anchors
-    //anchor1: user-defined anchorname 1
-    //anchor2: user-defined anchorname 2
-    //pos1,po2: two anchors world's coordinates
-    public boolean addEdge(String anchor1, String anchor2, Vector3 pos1, Vector3 pos2) throws UnsupportedOperationException
+    //METHOD: add node
+    //AnchorName: user-defined anchorname
+    //AnchorID: Anchor identifier for retrieving from azure cloud
+    //Type: Currently not used, for classifying anchors
+    public boolean addNode(String AnchorName,
+                           String AnchorID,
+                           Pose nodePose,
+                           MapBuildingActivity.NodeType Type
+    ) throws UnsupportedOperationException
     {
-        //search on the hashmap for corresponding node
-        if(!mapping.containsKey(anchor1)||!mapping.containsKey(anchor2))
+        if(!mapping.containsKey(AnchorName))
         {
-            Log.e(TAG, "Error: AnchorMap.addEdge(): Input anchors not existed!");
+            //create node from arguments
+            Node this_node = new Node(AnchorName,AnchorID,Type);
+
+            //compute hashval corresponding to the anchorname
+            mapping.put(AnchorName,NodesID);
+
+            //add new neighbor list to the adjacency list
+            adjacencyList.add(new ArrayList<Integer>());
+
+            //add node to the node list
+            NodeList.add(this_node);
+
+            //store pose=translation + rotation
+            Float[] anchorpos = new Float[7];
+
+            float[] translation = nodePose.getTranslation();
+            float[] rotation = nodePose.getRotationQuaternion();
+
+            //pose value
+            anchorpos[0] = translation[0];
+            anchorpos[1] = translation[1];
+            anchorpos[2] = translation[2];
+
+            //rotation value
+            anchorpos[3] = rotation[0];
+            anchorpos[4] = rotation[1];
+            anchorpos[5] = rotation[2];
+            anchorpos[6] = rotation[3];
+
+            //add to hash
+            anchorPos.put(NodesID,anchorpos);
+
+            //step Node id
+            NodesID++;
+            return true;
+        }
+        else
+        {
+            Log.e(TAG,"Error: Try to add already existed anchor to graph!");
             throw new UnsupportedOperationException();
         }
-        Integer Idx1 = mapping.get(anchor1);
-        Integer Idx2 = mapping.get(anchor2);
-
-        //add edge to the adjacency list
-        if(!adjacencyList.get(Idx1).contains(Idx2))
-            adjacencyList.get(Idx1).add(Idx2);
-        if(!adjacencyList.get(Idx2).contains(Idx1))
-            adjacencyList.get(Idx2).add(Idx1);
-
-        //add pos to the map
-        anchorPos.put(Idx1,pos1);
-        anchorPos.put(Idx2,pos2);
-
-        // add transformation vector to the hash dataset
-        //compute transformation
-        Vector3 transf12 = Vector3.subtract(pos2,pos1);
-        Vector3 transf21 = Vector3.subtract(pos1,pos2);
-
-        //add transformation to hashmap
-        transf.put(Integer.toString(Idx1)+"_"+Integer.toString(Idx2),transf12);
-        transf.put(Integer.toString(Idx2)+"_"+Integer.toString(Idx1),transf21);
-
-        return true;
     }
 
     //overloading addEdge method
@@ -135,73 +152,34 @@ public class AnchorMap {
         if(!adjacencyList.get(Idx2).contains(Idx1))
             adjacencyList.get(Idx2).add(Idx1);
 
-        // add transformation vector to the hash dataset
-        //set transformation as not initialized
-
-        Vector3 transf12 = null;
-        Vector3 transf21 = null;
-
-        //add transformation to hashmap
-        transf.put(Integer.toString(Idx1)+"_"+Integer.toString(Idx2),transf12);
-        transf.put(Integer.toString(Idx2)+"_"+Integer.toString(Idx1),transf21);
-
         return true;
     }
 
-    //METHOD: helper function for map loading and transformation update
-    public boolean updateTransf(Integer idx1, Integer idx2, Vector3 vec)
-    {
-
-        if(!adjacencyList.get(idx1).contains(idx2)) {
-            Log.d("UpdateTransf"," :error, update transformation to a non-existed edge!");
-            return false;
-        }
-        //add transformation to hashmap
-        transf.put(Integer.toString(idx1)+"_"+Integer.toString(idx2),vec);
-        return true;
-    }
     //METHOD： helper function for map loading and pos update
-    public boolean updatePos(Integer idx, Vector3 vec)
+    public boolean addPos(Integer idx, Float[] pos)
     {
-        anchorPos.put(idx,vec);
+        anchorPos.put(idx,pos);
         return true;
     }
 
     //METHOD: get the anchor pos with name anchor
     //anchor: anchor name
     //return please check the return value, if return null then failed to retrieve
-    public Vector3 getPos(String anchor)
+    public Pose getPos(String anchor)
     {
         if(!mapping.containsKey(anchor))
         {
             Log.d("GetPos: "," :input anchors doesn't exist!");
             return null;
         }
-        return anchorPos.get(mapping.get(anchor));
+        Float[] posArray = anchorPos.get(mapping.get(anchor));
+
+        float[] translation = {posArray[0],posArray[1],posArray[2]};
+        float[] rotation = {posArray[3],posArray[4],posArray[5],posArray[6]};
+        Pose foundPos = new Pose(translation,rotation);
+        return foundPos;
     }
 
-    public Vector3 getEdge(String anchor1, String anchor2)
-    {
-        Vector3 transformation = new Vector3();
-        if(!mapping.containsKey(anchor1)||!mapping.containsKey(anchor2))
-        {
-            Log.d("GetEdge: "," :input anchors doesn't exist!");
-            return null;
-        }
-        Integer idx1 = mapping.get(anchor1);
-        Integer idx2 = mapping.get(anchor2);
-
-        if(!transf.containsKey(Integer.toString(idx1) + "_" + Integer.toString(idx2)))
-        {
-            Log.d("Getedge: "," : request edge is recorded but doesn't initialized!");
-            return null;
-        }
-
-        //find the corresponding edge and return the vector
-        transformation = transf.get(Integer.toString(idx1) + "_" + Integer.toString(idx2));
-
-        return transformation;
-    }
 
     //METHOD: search shortest path between start and end nodes
     //start: start anchor name

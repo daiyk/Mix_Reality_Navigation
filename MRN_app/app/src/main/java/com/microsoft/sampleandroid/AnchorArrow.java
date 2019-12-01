@@ -9,6 +9,7 @@ import com.google.ar.core.Anchor;
 import com.google.ar.sceneform.AnchorNode;
 import com.google.ar.sceneform.FrameTime;
 import com.google.ar.sceneform.Node;
+import com.google.ar.sceneform.Scene;
 import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.Color;
@@ -46,14 +47,17 @@ public class AnchorArrow extends TransformableNode {
     public AnchorArrow(
             Context context,
             Vector3 localPos,
-            TransformationSystem arTransform
+            TransformationSystem arTransform,
+            Scene scene
     ){
         super(arTransform);
         this.context = context;
         this.localPos = localPos;
         this.getScaleController().setMaxScale(0.12f);
         this.getScaleController().setMinScale(0.1f);
-        //initialize targetAnchor to this anchor
+        if(scene!=null) {
+            targetAnchor.setParent(scene);
+        }
     }
     //@overide
     public void onActivate(){
@@ -63,8 +67,7 @@ public class AnchorArrow extends TransformableNode {
         }
 
         //set origin targetAnchor point to origin
-//        targetAnchor.setWorldPosition(new Vector3(0.0f,0.0f,0.0f));
-//        targetAnchor = this;
+        targetAnchor.setWorldPosition(new Vector3(0.0f,0.0f,0.0f));
         ModelRenderable.builder()
                 .setSource(this.context, Uri.parse("scene.sfb"))
                 .build()
@@ -88,6 +91,11 @@ public class AnchorArrow extends TransformableNode {
         //set anchor to point to the transformation position
         targetAnchor.setWorldPosition(pos);
     }
+
+    public Vector3 getTargetPos(){
+        return targetAnchor.getWorldPosition();
+    }
+
     public void updateTargetAnchor(AnchorNode Anchor)
     {
         //modify the target and set to the argument anchor
