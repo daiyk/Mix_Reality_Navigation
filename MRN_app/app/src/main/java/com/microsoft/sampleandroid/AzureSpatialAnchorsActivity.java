@@ -7,21 +7,18 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
-import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
-import android.provider.DocumentsContract;
+import android.os.Handler;
 
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import androidx.appcompat.app.AppCompatActivity;
 
 import android.util.Log;
-import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewConfiguration;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.RadioButton;
@@ -30,13 +27,10 @@ import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.google.ar.core.Anchor;
-import com.google.ar.core.HitResult;
-import com.google.ar.core.Plane;
 import com.google.ar.core.Pose;
 import com.google.ar.sceneform.AnchorNode;
 import com.google.ar.sceneform.ArSceneView;
-import com.google.ar.sceneform.HitTestResult;
+import com.google.ar.sceneform.FrameTime;
 import com.google.ar.sceneform.Scene;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.Color;
@@ -51,7 +45,6 @@ import com.hbisoft.pickit.PickiTCallbacks;
 import com.microsoft.azure.spatialanchors.AnchorLocateCriteria;
 import com.microsoft.azure.spatialanchors.AnchorLocatedEvent;
 import com.microsoft.azure.spatialanchors.CloudSpatialAnchor;
-import com.microsoft.azure.spatialanchors.CloudSpatialException;
 import com.microsoft.azure.spatialanchors.LocateAnchorStatus;
 import com.microsoft.azure.spatialanchors.LocateAnchorsCompletedEvent;
 import com.microsoft.azure.spatialanchors.NearAnchorCriteria;
@@ -60,14 +53,9 @@ import com.microsoft.azure.spatialanchors.SessionUpdatedEvent;
 import java.io.File;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.LinkedHashMap;
 import java.util.Stack;
 import java.util.concurrent.ConcurrentHashMap;
 
-import javax.vecmath.Matrix3f;
-import javax.vecmath.Vector3f;
 
 public class AzureSpatialAnchorsActivity extends AppCompatActivity implements PickiTCallbacks {
     private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 101;
@@ -80,11 +68,8 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
     private AzureSpatialAnchorsManager cloudAnchorManager;
     private DemoStep currentDemoStep = DemoStep.Start;
     private boolean enoughDataForSaving;
-    private static final int numberOfNearbyAnchors = 3;
     private final Object progressLock = new Object();
     private final Object renderLock = new Object();
-    private int saveCount = 0;
-    private int anchorFound = 0;
     private float anchorBoaradScale = 0.5f;
 
     // Materials
@@ -92,6 +77,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
     private static Material foundColor;
     private static Material readyColor;
     private static Material savedColor;
+    private static Material targetColor;
 
     // UI Elements
     private ArFragment arFragment;
@@ -102,31 +88,25 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
     private TextView statusText;
     private AnchorArrow arrow;
 
-
+    //layout element
     private RadioGroup radioGroup;
     private RadioButton radioButton;
     private TextView textView;
     private Button navigateButton;
     private Spinner spinner;
     private Vector3 camRelPose = new Vector3(0.0f, 0.2f, -1.5f);
+
+    //navigation relevent
     private float distance;
     private AnchorNode sourceAnchorNode = new AnchorNode();
     private boolean navigationInit;
-    private AnchorNode temptargetAnchor = null;
-    private AnchorNode arrowAnchor = null;
-
-    private AnchorNode final_targetAnchor;
-
     private AnchorMap anchorMap;
     ArrayList<String> optPath = new ArrayList<>();
     Stack<String> stack_id = new Stack<>();
-
     private String sourceName = null;
     private String targetName = null;
-    private boolean reachTarget = false;
     private PickiT pickit;
 
-    private final LinkedHashMap<String, String> anchorNamesIdentifier = new LinkedHashMap<>();
 
     //back button detector
     public void exitDemoClicked(View v) {
@@ -154,26 +134,35 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
         arrow = new AnchorArrow(this, camRelPose, arFragment.getTransformationSystem(),scene);
         scene.getCamera().addChild(arrow);
         arrow.setEnabled(false);
+        arrow.setTargetEnabled(false);
 
-        scene.addOnUpdateListener(frameTime -> {
-            if (cloudAnchorManager != null) {
-                // Pass frames to Spatial Anchors for processing.
-                cloudAnchorManager.update(sceneView.getArFrame());
-            }
-            if (currentDemoStep == DemoStep.NavigationStart) {
-                Vector3 cameraPosition = sceneView.getScene().getCamera().getWorldPosition();
+        scene.addOnUpdateListener(
+                new Scene.OnUpdateListener()
+                {
+                    @Override
+                    public void onUpdate(FrameTime Frame)
+                    {
+                        if (cloudAnchorManager != null) {
+                            // Pass frames to Spatial Anchors for processing.
+                            cloudAnchorManager.update(sceneView.getArFrame());
+                        }
+                        if (currentDemoStep == DemoStep.NavigationStart) {
+                            Vector3 cameraPosition = sceneView.getScene().getCamera().getWorldPosition();
 
-                Vector3 targetPosition = arrow.getTargetPos();
-                distance = (float) ( Math.sqrt(targetPosition.x * targetPosition.x + targetPosition.z * targetPosition.z)-
-                                        Math.sqrt(cameraPosition.x * cameraPosition.x + cameraPosition.z * cameraPosition.z));
-                statusText.setVisibility(View.VISIBLE);
-                statusText.setText(String.valueOf(distance));
-                if (distance < 1.0) {
-                    advanceDemo();
-                }
-            }
-
-        });
+                            Vector3 targetPosition = arrow.getTargetPos();
+                            distance = (float) ( Math.sqrt(targetPosition.x * targetPosition.x + targetPosition.z * targetPosition.z)-
+                                    Math.sqrt(cameraPosition.x * cameraPosition.x + cameraPosition.z * cameraPosition.z));
+                            if(statusText.getVisibility()==statusText.INVISIBLE) {
+                                statusText.setVisibility(View.VISIBLE);
+                            }
+//                            statusText.setText(String.valueOf(distance));
+                            statusText.setText(String.format("%f, %f, %f",targetPosition.x,targetPosition.y,targetPosition.z));
+                            if (distance < 0.3 ) {
+                                advanceDemo();
+                            }
+                        }
+                    }
+                });
 
         backButton = findViewById(R.id.backButton);
         statusText = findViewById(R.id.statusText);
@@ -199,6 +188,10 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                     readyColor = material;
                     foundColor = material;
                 });
+        MaterialFactory.makeOpaqueWithColor(this, new Color(ContextCompat.getColor(this, R.color.SeaGreen)))
+        .thenAccept(material -> {
+                    targetColor=material;
+        });
         //set variable to pick real path from url
         pickit = new PickiT(this, this);
     }
@@ -239,6 +232,9 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
         }
     }
 
+    private void sceneUpdateLisener(){
+
+    }
     private void advanceDemo() {
         switch (currentDemoStep) {
             case LookForNearbyAnchors:
@@ -316,10 +312,9 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 
 
                 runOnUiThread(() -> {
-                    actionButton.setVisibility(View.GONE);
+                    actionButton.setVisibility(View.INVISIBLE);
                     statusText.setText("Select Start Point");
 
-//                    textView.setVisibility(View.INVISIBLE);
                     navigateButton.setVisibility(View.VISIBLE);
                     navigateButton.setText("Confirm");
                     spinner.setVisibility(View.VISIBLE);
@@ -342,7 +337,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                 cloudAnchorManager.startLocating(criteria);
 
                 runOnUiThread(() -> {
-                    actionButton.setVisibility(View.INVISIBLE);
                     statusText.setText("Look for anchor at your position, please walk around......");
                 });
 
@@ -360,7 +354,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                             statusText.setText("please choose target from the list");
                             actionButton.setVisibility(View.INVISIBLE);
                             navigateButton.setVisibility(View.VISIBLE);
-                            navigateButton.setText("confirm");
+                            navigateButton.setText("Confirm");
                             spinner.setVisibility(View.VISIBLE);
                             currentDemoStep = DemoStep.ChooseStartPoint;
                         });
@@ -372,8 +366,8 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                         stack_id.push(anchorMap.getNode(optPath.get(i)).AnchorName);
                     }
                     navigationInit = false;
-                    advanceDemo();
-                    return;
+//                    advanceDemo();
+//                    return;
                 }
 
                 Pose sourceMapPos = anchorMap.getPos(sourceName);
@@ -390,96 +384,51 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                         arrow.setEnabled(true);
                     }
                     arrow.updateTargetPos(new Vector3(nextAnchorTranslation[0],nextAnchorTranslation[1],nextAnchorTranslation[2]));
+                    startNewSession();
+                    //use localizer to find the anchor and thus improve the accuracy
+                    AnchorLocateCriteria nextCriteria = new AnchorLocateCriteria();
+                    //criteria.setBypassCache(true);
+                    //不规定而是找到最近的anchor
+                    //String EMPTY_STRING = "";
+                    nextCriteria.setIdentifiers(new String[]{anchorMap.getNode(nextTarget).AnchorID});
+
+                    // Cannot run more than one watcher concurrently
+                    stopWatcher();
+
+                    cloudAnchorManager.startLocating(nextCriteria);
+                    break;
                 }
                 else{
                     // if empty then target is reached
+                    //render targetnode
+                    arrow.setTargetRenderable(targetColor);
+                    arrow.setTargetEnabled(true);
                     currentDemoStep = DemoStep.NavigationEnd;
                     actionButton.setVisibility(View.VISIBLE);
+                    statusText.setText("Target reached! Press to exit navigation");
                     actionButton.setText("End Navigation");
+                    break;
                 }
-                break;
 
             case NavigationEnd:
-                statusText.setText("Target reached! press back button to exit.");
+                arrow.setTargetEnabled(false);
                 arrow.setEnabled(false);
-
-//                AnchorNode dummyNode = null;
-//                final Vector3[] nextAnchorTransf = {Vector3.add(getTransformedCoordinates(rotationMatrix, anchorMap.getPos(nextAnchorName)), current_worldcoord)};//{Vector3.add(getTransformedCoordinates(rotationMatrix, anchorMap.getEdge(sourceName,nextAnchorName)),current_worldcoord)};
-//                final Vector3[] nextAnchorTransf = {getTransformedCoordinates(rotationMatrix, anchorMap.getPos(nextAnchorName))};//{Vector3.add(getTransformedCoordinates(rotationMatrix, anchorMap.getEdge(sourceName,nextAnchorName)),current_worldcoord)};
-//
-//                dummyNode.setWorldPosition(nextAnchorTransf);
-//
-//                final String[] nextAnchorID = {anchorMap.getNode(nextAnchorName).AnchorID};
-//                arrow.updateTargetAnchor(dummyNode);
-                //arrow.updateTargetAnchor(temptargetAnchor);
-//                stopWatcher();
-
-//                Scene scene = sceneView.getScene();
-//                scene.addOnUpdateListener(frameTime -> {
-//
-////                    if(temptargetAnchor != null){
-////                        arrowAnchor = temptargetAnchor;
-////                    }
-////                    else{
-////                        arrowAnchor = dummyNode;
-////                    }
-//                    Vector3 targetPosition = nextAnchorTransf[0];//temptargetAnchor.getWorldPosition();
-//                    Vector3 cameraPosition = sceneView.getScene().getCamera().getWorldPosition();
-//                    //distance = (float) ( Math.abs(Math.sqrt(targetPosition.x * targetPosition.x + targetPosition.z * targetPosition.z)-
-//                    //        Math.sqrt(cameraPosition.x * cameraPosition.x + cameraPosition.z * cameraPosition.z)));
-//                    distance = (float) Math.sqrt((targetPosition.x - cameraPosition.x) * (targetPosition.x - cameraPosition.x) +
-//                            (targetPosition.z - cameraPosition.z) * (targetPosition.z - cameraPosition.z));
-//                    statusText.setText(String.valueOf(distance));
-//
-//                    if (distance < 0.3) {
-//                        temptargetAnchor = null;
-//                        String nextAnchorName_update = toNextAnchor(stack_path);
-//                        if (nextAnchorName_update != "Empty") {
-//                            nextAnchorTransf[0] = getTransformedCoordinates(rotationMatrix, anchorMap.getPos(nextAnchorName_update));
-//                        } else {
-//                            statusText.setText("Reach Final Destination");
-//                            actionButton.setVisibility(View.VISIBLE);
-//                            actionButton.setText("End Navigation");
-//
-//                        }
-//                        //getTransformedCoordinates(rotationMatrix, anchorMap.getPos(nextAnchorName_update));
-//                        arrow.updateTargetPos(nextAnchorTransf[0]);
-//                        //                        nextAnchorID[0] = anchorMap.getNode(nextAnchorName[0]).AnchorID;
-//                    }
-
-//                    if (reachTarget) {
-//                        runOnUiThread(() -> {
-//                            actionButton.setText("End Navigation");
-//                            statusText.setText("Reach Final Destination");
-//                            backButton.setVisibility(View.VISIBLE);
-//
-//                            radioGroup.setVisibility(View.INVISIBLE);
-////                    textView.setVisibility(View.INVISIBLE);
-//                            navigateButton.setVisibility(View.INVISIBLE);
-//                        });
-//                    }
-//                });
-//                arrow.updateTargetPos(nextAnchorTransf[0]);
-//                arrow.setEnabled(true);
-
+                //no need to continue search
+                stopWatcher();
                 currentDemoStep = DemoStep.End;
                 if(actionButton.getVisibility()==View.INVISIBLE){
                     actionButton.setVisibility(View.VISIBLE);
                 }
                 actionButton.setText("Press to Refresh");
-//                for (AnchorVisual toDeleteVisual : anchorVisuals.values()) {
-//                    if(toDeleteVisual != targetAnchorVisual) {
-//                        cloudAnchorManager.deleteAnchorAsync(toDeleteVisual.getCloudAnchor());
-//                        toDeleteVisual.destroy();
-//                    }
-//                }
+
                 break;
             case End:
                 for (AnchorVisual toDeleteVisual : anchorVisuals.values()) {
                     cloudAnchorManager.deleteAnchorAsync(toDeleteVisual.getCloudAnchor());
                 }
-
+                arrow.destroy();
                 destroySession();
+                anchorMap.destory();
 
                 runOnUiThread(() -> {
                     actionButton.setText("Restart");
@@ -527,6 +476,15 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 
                 case Located:
                     renderLocatedAnchor(event.getAnchor());
+                    if(currentDemoStep==DemoStep.LookForAnchor) {
+                        statusText.setText("Source anchor found!");
+                        Handler handler = new Handler();
+                        handler.postDelayed(new Runnable() {
+                            public void run() {
+                                // Actions to do after 10 seconds
+                            }
+                        }, 2000);
+                    }
                     break;
 
                 case NotLocatedAnchorDoesNotExist:
@@ -542,21 +500,22 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
         if (currentDemoStep == DemoStep.LookForAnchor) {
 //            stopWatcher();
             runOnUiThread(() -> {
-                statusText.setText("Source Anchor located! please choose target from the list");
-                actionButton.setVisibility(View.INVISIBLE);
+                statusText.setText("Please choose and confirm the target place");
+                if(actionButton.getVisibility()==View.VISIBLE){
+                    actionButton.setVisibility(View.INVISIBLE);
+                }
+
                 navigateButton.setVisibility(View.VISIBLE);
-                navigateButton.setText("confirm");
+                navigateButton.setText("Confirm");
                 spinner.setVisibility(View.VISIBLE);
             });
-//            currentDemoStep = DemoStep.NavigationStart;
             return;
         }
-        if (currentDemoStep == DemoStep.NavigationEnd) {
+        if (currentDemoStep == DemoStep.NavigationStart) {
             runOnUiThread(() -> {
-                statusText.setText("Asistant Anchor located!");
-                actionButton.setVisibility(View.INVISIBLE);
+                Toast.makeText(this, "Find one", Toast.LENGTH_SHORT).show();
             });
-//            LookforAnchor_realtime(stack_id.pop());
+            return;
         }
     }
 
@@ -588,14 +547,12 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
     private void renderLocatedAnchor(CloudSpatialAnchor anchor) {
         if (currentDemoStep == DemoStep.LookForAnchor) {
             AnchorVisual foundVisual = new AnchorVisual(anchor.getLocalAnchor());
-            temptargetAnchor = foundVisual.getAnchorNode();
+//            temptargetAnchor = foundVisual.getAnchorNode();
 //            anchorVisuals.put("", foundVisual);
 
             foundVisual.setCloudAnchor(anchor);
             foundVisual.getAnchorNode().setParent(arFragment.getArSceneView().getScene());
 
-//            String cloudAnchorIdentifier = foundVisual.getCloudAnchor().getIdentifier();
-//            anchorVisuals.put(cloudAnchorIdentifier, foundVisual);
             foundVisual.setColor(foundColor);
             Vector3 localPos = new Vector3(0.0f, anchorBoaradScale * 0.55f, 0.0f);
             AnchorBoard anchorBoard = new AnchorBoard(this, sourceName, 0.5f, localPos);
@@ -608,18 +565,21 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
         } else if (currentDemoStep == DemoStep.NavigationStart) {
             // Render anchors during the navigation process, can be deleted later
             AnchorVisual foundVisual = new AnchorVisual(anchor.getLocalAnchor());
+            foundVisual.getAnchorNode().setParent(arFragment.getArSceneView().getScene());
+            foundVisual.setColor(foundColor);
             foundVisual.render(arFragment);
-            // Here assign located anchor to temptargetAnchor, can put somewhere else later
-            temptargetAnchor = foundVisual.getAnchorNode();
+
+            float[] nextLocateAnchor = foundVisual.getAnchorNode().getAnchor().getPose().getTranslation();
+            arrow.updateTargetPos(new Vector3(nextLocateAnchor[0],nextLocateAnchor[1],nextLocateAnchor[2]));
+
         } else if (currentDemoStep == DemoStep.NavigationEnd) {
-            runOnUiThread(() -> {
-                statusText.setText("233333333333");
-            });
+            AnchorVisual foundVisual = new AnchorVisual(anchor.getLocalAnchor());
+            float[] nextLocateAnchor = foundVisual.getAnchorNode().getAnchor().getPose().getTranslation();
+            arrow.updateTargetPos(new Vector3(nextLocateAnchor[0],nextLocateAnchor[1],nextLocateAnchor[2]));
         }
     }
 
     private void startDemo() {
-        saveCount = 0;
         startNewSession();
         runOnUiThread(() -> {
             scanProgressText.setVisibility(View.GONE);
@@ -664,7 +624,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
             currentDemoStep = DemoStep.LookForAnchor;
             advanceDemo();
         }
-//        if (currentDemoStep == DemoStep.NavigationStart){
         else if (currentDemoStep == DemoStep.LookForAnchor) {
             targetName = spinner.getSelectedItem().toString();
             runOnUiThread(() -> {
@@ -726,39 +685,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
         }
     }
 
-    //    public boolean navigationProcess(ArrayList<String> optPath, int idx){
-//
-//        while(!reachTarget){
-//        }
-//        while(!reachTarget){
-//
-////                 test continuous navigation
-////                Iterator it = anchorNamesIdentifier.keySet().iterator();
-////                it.next();
-////                AnchorVisual tempAnchor = anchorVisuals.get(anchorNamesIdentifier.get(it.next()));
-////                AnchorVisual targetAnchorVisual = tempAnchor;
-//            idx ++;
-//
-//            // Vector3 targetPosition = anchorMap.getTransformation();
-//
-////            AnchorVisual targetAnchorVisual = anchorVisuals.get(anchorNamesIdentifier.get("Anchor 2"));
-////            targetAnchor = targetAnchorVisual.getAnchorNode();
-//            //arrow.updateTargetAnchor(targetAnchorVisual.getAnchorNode());
-//
-//
-//            //targetAnchorVisual.render(arFragment);
-//            //end navigation button
-//            runOnUiThread(() -> {
-//                statusText.setText("");
-//                backButton.setVisibility(View.VISIBLE);
-//                actionButton.setVisibility(View.INVISIBLE);
-//                radioGroup.setVisibility(View.INVISIBLE);
-//                textView.setVisibility(View.INVISIBLE);
-//                navigateButton.setVisibility(View.INVISIBLE);
-//            });
-//        }
-//
-//    }
     //************* activity processor for load map function ****************************//
     public void onActivityResult(int requestCode, int resultCode,
                                  Intent resultData) {
@@ -785,7 +711,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
         }
     }
 
-    //@following three functions are override of PickiT that get real path from uri
     //@following three functions are override of PickiT that get real path from uri
     @Override
     public void PickiTonStartListener() {
@@ -823,9 +748,9 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 
                 //set button temporal invisiable
                 actionButton.setVisibility(View.VISIBLE);
-                statusText.setText("Map Loaded. Start Navigation");
+                actionButton.setText("choose start point");
+                statusText.setText("Map Loaded");
                 // Permission has already been granted
-                advanceDemo();
 
             }
         } else {
@@ -863,6 +788,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
         Cross,                  ///< node where new graph branch is generated
     }
 }
+
 
 
 //

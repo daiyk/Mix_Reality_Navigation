@@ -256,10 +256,20 @@ public class AnchorMap {
         if(!mapping.containsKey(anchorName))
         {
             Log.e(TAG,"Error: request node doesn't existed!");
-            return new Node();
+            return null;
         }
         Integer nodeID = mapping.get(anchorName);
         return NodeList.get(nodeID);
+    }
+    public void destory(){
+        mapping.clear();
+        mapping = new HashMap<>();
+        adjacencyList.clear();
+        adjacencyList = new ArrayList<ArrayList<Integer>>();
+        NodeList.clear();
+        NodeList = new ArrayList<>();
+        anchorPos.clear();
+        anchorPos = new HashMap<>();
     }
 }
 

@@ -17,9 +17,9 @@ import com.google.ar.sceneform.rendering.Material;
 import com.google.ar.sceneform.rendering.MaterialFactory;
 import com.google.ar.sceneform.rendering.ModelRenderable;
 import com.google.ar.sceneform.rendering.Renderable;
+import com.google.ar.sceneform.rendering.ShapeFactory;
 import com.google.ar.sceneform.ux.TransformableNode;
 import com.google.ar.sceneform.ux.TransformationSystem;
-import com.hbisoft.pickit.PickiTCallbacks;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -29,6 +29,7 @@ public class AnchorArrow extends TransformableNode {
     private static final float INFO_CARD_Y_POS_COEFF = 0.55f;
     private final Context context;
     private Vector3 localPos;
+    private AnchorBoard targetBoard;
     private Node targetAnchor = new Node();
     private void addHighlightToNode(Node node) {
         CompletableFuture<Material> materialCompletableFuture =
@@ -55,9 +56,10 @@ public class AnchorArrow extends TransformableNode {
         this.localPos = localPos;
         this.getScaleController().setMaxScale(0.12f);
         this.getScaleController().setMinScale(0.1f);
-        if(scene!=null) {
-            targetAnchor.setParent(scene);
-        }
+        targetAnchor.setParent(scene);
+        Vector3 boardPos = new Vector3(0.0f,  0.5f, 0.0f);
+        targetBoard = new AnchorBoard(context,"Your Target",0.5f,boardPos);
+        targetBoard.setParent(targetAnchor);
     }
     //@overide
     public void onActivate(){
@@ -104,6 +106,15 @@ public class AnchorArrow extends TransformableNode {
             targetAnchor = Anchor;
         }
     }
+    public void setTargetRenderable(Material color){
+        MainThreadContext.runOnUiThread(() -> {
+            Renderable render = ShapeFactory.makeCylinder(0.2f,0.5f,new Vector3(0.f,0.25f,0.f),color);
+            targetAnchor.setRenderable(render);
+        });
+    }
+    public void setTargetEnabled(Boolean open){
+        targetAnchor.setEnabled(open);
+    }
 
     public void onUpdate(FrameTime frameTime) {
 
@@ -121,6 +132,15 @@ public class AnchorArrow extends TransformableNode {
         Quaternion lookRotation = Quaternion.lookRotation(direction, Vector3.up());
         this.setWorldRotation(lookRotation);
 
+    }
+
+    public void destroy() {
+        MainThreadContext.runOnUiThread(() -> {
+            targetAnchor.setRenderable(null);
+            targetAnchor.setParent(null);
+            this.setRenderable(null);
+            this.setParent(null);
+        });
     }
 
 
