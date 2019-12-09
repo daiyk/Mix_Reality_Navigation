@@ -33,6 +33,7 @@
             android:layout_below="@+id/backButton"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:layout_marginTop="50dp"
             android:visibility="gone"/>
 
         <TextView
@@ -64,6 +65,59 @@
             android:textAllCaps="false" />
 
         <LinearLayout
+            android:id="@+id/linearLayout_manual"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_below="@+id/backButton"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <Spinner
+                android:id="@+id/spinner_manual1"
+                android:layout_marginTop="50dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <Spinner
+                android:id="@+id/spinner_manual2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content" />
+
+            <Button
+                android:id="@+id/connect_submit"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Submit" />
+        </LinearLayout>
+
+        <RadioGroup
+            android:id="@+id/radioGroup"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:visibility="gone">
+
+            <RadioButton
+                android:id="@+id/Main"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:checked="true"
+                android:text="Main Node" />
+
+            <RadioButton
+                android:id="@+id/Aux"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Auxiliary Node" />
+
+            <Button
+                android:id="@+id/typeButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Submit" />
+        </RadioGroup>
+
+        <LinearLayout
             android:id="@+id/linearLayout_buttons"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -73,6 +127,12 @@
             android:layout_marginBottom="0dp"
             android:orientation="vertical"
             android:visibility="gone">
+
+            <Button
+                android:id="@+id/manualButton"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Manually Connect" />
 
             <Button
                 android:id="@+id/newBranchButton"
@@ -86,6 +146,7 @@
                 android:layout_height="wrap_content"
                 android:text="Finish mapping"
                 android:textAllCaps="false" />
+
         </LinearLayout>
 
         <LinearLayout

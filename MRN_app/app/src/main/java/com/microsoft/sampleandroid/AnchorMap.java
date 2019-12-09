@@ -256,10 +256,20 @@ public class AnchorMap {
         if(!mapping.containsKey(anchorName))
         {
             Log.e(TAG,"Error: request node doesn't existed!");
-            return new Node();
+            return null;
         }
         Integer nodeID = mapping.get(anchorName);
         return NodeList.get(nodeID);
+    }
+    public void destory(){
+        mapping.clear();
+        mapping = new HashMap<>();
+        adjacencyList.clear();
+        adjacencyList = new ArrayList<ArrayList<Integer>>();
+        NodeList.clear();
+        NodeList = new ArrayList<>();
+        anchorPos.clear();
+        anchorPos = new HashMap<>();
     }
 }
 
@@ -278,3 +288,78 @@ class Node{
     public String AnchorID;
     public MapBuildingActivity.NodeType Type;
 }
+
+//    //deprecated! use addEdge(String 1, String 2) instead!
+//    // METHOD: add edge between two anchors
+//    //anchor1: user-defined anchorname 1
+//    //anchor2: user-defined anchorname 2
+//    //pos1,po2: two anchors world's coordinates
+//    public boolean addEdge(String anchor1, String anchor2, Vector3 pos1, Vector3 pos2) throws UnsupportedOperationException
+//    {
+//        //search on the hashmap for corresponding node
+//        if(!mapping.containsKey(anchor1)||!mapping.containsKey(anchor2))
+//        {
+//            Log.e(TAG, "Error: AnchorMap.addEdge(): Input anchors not existed!");
+//            throw new UnsupportedOperationException();
+//        }
+//        Integer Idx1 = mapping.get(anchor1);
+//        Integer Idx2 = mapping.get(anchor2);
+//
+//        //add edge to the adjacency list
+//        if(!adjacencyList.get(Idx1).contains(Idx2))
+//            adjacencyList.get(Idx1).add(Idx2);
+//        if(!adjacencyList.get(Idx2).contains(Idx1))
+//            adjacencyList.get(Idx2).add(Idx1);
+//
+//        //add pos to the map
+////        anchorPos.put(Idx1,pos1);
+////        anchorPos.put(Idx2,pos2);
+//
+//        // add transformation vector to the hash dataset
+//        //compute transformation
+//        Vector3 transf12 = Vector3.subtract(pos2,pos1);
+//        Vector3 transf21 = Vector3.subtract(pos1,pos2);
+//
+//        //add transformation to hashmap
+//        transf.put(Integer.toString(Idx1)+"_"+Integer.toString(Idx2),transf12);
+//        transf.put(Integer.toString(Idx2)+"_"+Integer.toString(Idx1),transf21);
+//
+//        return true;
+//    }
+
+
+//    //METHOD: helper function for map loading and transformation update
+//    public boolean updateTransf(Integer idx1, Integer idx2, Vector3 vec)
+//    {
+//
+//        if(!adjacencyList.get(idx1).contains(idx2)) {
+//            Log.d("UpdateTransf"," :error, update transformation to a non-existed edge!");
+//            return false;
+//        }
+//        //add transformation to hashmap
+//        transf.put(Integer.toString(idx1)+"_"+Integer.toString(idx2),vec);
+//        return true;
+//    }
+
+//    public Vector3 getEdge(String anchor1, String anchor2)
+//    {
+//        Vector3 transformation = new Vector3();
+//        if(!mapping.containsKey(anchor1)||!mapping.containsKey(anchor2))
+//        {
+//            Log.d("GetEdge: "," :input anchors doesn't exist!");
+//            return null;
+//        }
+//        Integer idx1 = mapping.get(anchor1);
+//        Integer idx2 = mapping.get(anchor2);
+//
+//        if(!transf.containsKey(Integer.toString(idx1) + "_" + Integer.toString(idx2)))
+//        {
+//            Log.d("Getedge: "," : request edge is recorded but doesn't initialized!");
+//            return null;
+//        }
+//
+//        //find the corresponding edge and return the vector
+//        transformation = transf.get(Integer.toString(idx1) + "_" + Integer.toString(idx2));
+//
+//        return transformation;
+//    }

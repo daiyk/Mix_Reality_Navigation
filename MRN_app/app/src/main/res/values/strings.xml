@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Sample Java Android</string>
+    <string name="app_name">Mixed Reality Navigation</string>
     <string name="title_activity_aractive">ARActive</string>
     <string name="main_title_text">Mixed Reality Navigation</string>
     <string name="main_basic_button_text">Build Map</string>

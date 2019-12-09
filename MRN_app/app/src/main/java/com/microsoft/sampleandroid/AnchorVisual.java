@@ -2,10 +2,15 @@
 // Licensed under the MIT license.
 package com.microsoft.sampleandroid;
 
+import android.view.MotionEvent;
+
 import com.google.ar.core.Anchor;
 import com.google.ar.sceneform.AnchorNode;
+import com.google.ar.sceneform.HitTestResult;
 import com.google.ar.sceneform.math.Vector3;
+import com.google.ar.sceneform.rendering.Color;
 import com.google.ar.sceneform.rendering.Material;
+import com.google.ar.sceneform.rendering.MaterialFactory;
 import com.google.ar.sceneform.rendering.Renderable;
 import com.google.ar.sceneform.rendering.ShapeFactory;
 import com.google.ar.sceneform.ux.ArFragment;
@@ -19,6 +24,9 @@ class AnchorVisual {
     private CloudSpatialAnchor cloudAnchor;
     private Material color;
     private Renderable nodeRenderable;
+    private String name = null;
+    private boolean selected = false;
+    private boolean activated = false;
 
     public AnchorVisual(Anchor localAnchor) {
         anchorNode = new AnchorNode(localAnchor);
@@ -47,7 +55,34 @@ class AnchorVisual {
             sphere.setParent(this.anchorNode);
             sphere.setRenderable(this.nodeRenderable);
             sphere.select();
+
+            anchorNode.setOnTapListener(this::onTapListener);
         });
+    }
+
+    public void setName(String anchorName){
+        anchorNode.setName(anchorName);
+    }
+
+    public String getName(){
+        return name;
+    }
+
+    public void setStatus(boolean activated){
+        this.activated = activated;
+    }
+
+    private void onTapListener(HitTestResult hitTestResult, MotionEvent motionEvent) {
+        if(activated){
+            if(selected){
+                name = hitTestResult.getNode().getName();
+                selected = !selected;
+                //Later render something on the Node to show it's selected
+            }else{
+                name = null;
+                selected = !selected;
+            }
+        }
     }
 
     public void setCloudAnchor(CloudSpatialAnchor cloudAnchor) {

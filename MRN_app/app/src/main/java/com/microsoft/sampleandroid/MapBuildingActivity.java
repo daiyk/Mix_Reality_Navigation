@@ -15,6 +15,8 @@ import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -24,14 +26,18 @@ import com.google.ar.core.Camera;
 import com.google.ar.core.HitResult;
 import com.google.ar.core.Plane;
 import com.google.ar.core.Pose;
+import com.google.ar.sceneform.AnchorNode;
 import com.google.ar.sceneform.ArSceneView;
 import com.google.ar.sceneform.HitTestResult;
 import com.google.ar.sceneform.Node;
 import com.google.ar.sceneform.Scene;
+import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.Color;
 import com.google.ar.sceneform.rendering.Material;
 import com.google.ar.sceneform.rendering.MaterialFactory;
+import com.google.ar.sceneform.rendering.ModelRenderable;
+import com.google.ar.sceneform.rendering.ShapeFactory;
 import com.google.ar.sceneform.rendering.ViewRenderable;
 import com.google.ar.sceneform.ux.ArFragment;
 
@@ -59,7 +65,10 @@ import javax.vecmath.Vector3d;
 public class MapBuildingActivity extends AppCompatActivity
 {
     private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 100;
-    private String anchorID;
+    private String anchorID = null;
+    private String prev_anchorID;
+    private LinkedHashMap<String, String> anchorID_NamePairs = new LinkedHashMap<>();
+
     private final ConcurrentHashMap<String, AnchorVisual> anchorVisuals = new ConcurrentHashMap<>();
     private boolean basicDemo = true;
     private AzureSpatialAnchorsManager cloudAnchorManager;
@@ -91,7 +100,6 @@ public class MapBuildingActivity extends AppCompatActivity
     private TextView statusText;
 
     private Pose current_anchorPose;
-    private Button finishButton;
     private AnchorMap anchorMap;
     private ArrayList<String> AnchorNames = new ArrayList<String>();
     private ArrayList<String> AnchorNames_major = new ArrayList<String>();
@@ -100,12 +108,23 @@ public class MapBuildingActivity extends AppCompatActivity
     private boolean spinner_selected = false;
 
     private EditText nameInput;
+    private Button finishButton;
     private Button submitButton;
     private Button newBranchButton;
+    private Button manualButton;
     private LinearLayout mylinearLayout;
     private LinearLayout mylinearLayout_buttons;
     private String anchorName;
     private Spinner spinner_branch;
+    private RadioGroup radioGroup;
+    private RadioButton radioButton;
+    private Button typeButton;
+    private NodeType nodeType;
+    private LinearLayout linearLayout_manual;
+    private Spinner spinner_manual1;
+    private Spinner spinner_manual2;
+    private Button connectsubmitButton;
+
 
     private final LinkedHashMap<String,String> anchorNamesIdentifier = new LinkedHashMap<>();
     public void exitDemoClicked(View v) {
@@ -150,14 +169,25 @@ public class MapBuildingActivity extends AppCompatActivity
         newBranchButton.setOnClickListener((View v) -> onClick_branch());
         spinner_branch = findViewById(R.id.spinner_branch);
 
+        radioGroup = findViewById(R.id.radioGroup);
+        typeButton = findViewById(R.id.typeButton);
+        typeButton.setOnClickListener((View v) -> onClick_type());
+
         nameInput = findViewById(R.id.editText);
         submitButton = findViewById(R.id.submitButton);
         mylinearLayout = findViewById(R.id.linearLayout_input);
         submitButton.setOnClickListener((View v) -> onClick_submit());
+        manualButton = findViewById(R.id.manualButton);
+        manualButton.setOnClickListener((View v) -> onClick_connect());
+
+        linearLayout_manual = findViewById(R.id.linearLayout_manual);
+        connectsubmitButton = findViewById(R.id.connect_submit);
+        spinner_manual1 = findViewById(R.id.spinner_manual1);
+        spinner_manual2 = findViewById(R.id.spinner_manual2);
+        connectsubmitButton .setOnClickListener((View v) -> onClick_submitconnection());
+
 
         anchorMap = new AnchorMap();
-
-
 
         MaterialFactory.makeOpaqueWithColor(this, new Color(android.graphics.Color.RED))
                 .thenAccept(material -> failedColor = material);
@@ -258,15 +288,6 @@ public class MapBuildingActivity extends AppCompatActivity
 
                 break;
 
-//            case AddtoMap:
-//
-//                runOnUiThread(() -> {
-//                    statusText.setText("Anchor info added to Map");
-//                    actionButton.setVisibility(View.VISIBLE);
-//                });
-//                currentDemoStep = DemoStep.CreateAnotherLocalAnchor;
-//                break;
-
             case SaveMap:
                 if (ContextCompat.checkSelfPermission(this,
                         Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -330,9 +351,10 @@ public class MapBuildingActivity extends AppCompatActivity
         anchorID = result.getIdentifier();
 
         runOnUiThread(() -> {
-            statusText.setText("");
+            statusText.setText("Select the NodeType");
             //Here we can click Submit button
-            mylinearLayout.setVisibility(View.VISIBLE);
+//            mylinearLayout.setVisibility(View.VISIBLE);
+            radioGroup.setVisibility(View.VISIBLE);
             actionButton.setVisibility(View.INVISIBLE);
 //            finishButton.setVisibility(View.VISIBLE);
         });
@@ -343,10 +365,6 @@ public class MapBuildingActivity extends AppCompatActivity
         anchorVisuals.put(anchorID, visual);
         anchorVisuals.remove("");
 
-
-        // Need to create more anchors for nearby demo
-//        currentDemoStep = DemoStep.CreateAnotherLocalAnchor;
-//        advanceDemo();
     }
 
     private void anchorSaveFailed(String message) {
@@ -380,7 +398,6 @@ public class MapBuildingActivity extends AppCompatActivity
                 statusText.setText("Move around the anchor");
             }
         });
-
         currentDemoStep = DemoStep.SaveCloudAnchor;
 
         return visual.getLocalAnchor();
@@ -457,8 +474,6 @@ public class MapBuildingActivity extends AppCompatActivity
         destroySession();
 
         cloudAnchorManager = new AzureSpatialAnchorsManager(sceneView.getSession());
-//        cloudAnchorManager.addAnchorLocatedListener(this::onAnchorLocated);
-//        cloudAnchorManager.addLocateAnchorsCompletedListener(this::onLocateAnchorsCompleted);
         cloudAnchorManager.addSessionUpdatedListener(this::onSessionUpdated);
         cloudAnchorManager.start();
     }
@@ -468,9 +483,14 @@ public class MapBuildingActivity extends AppCompatActivity
             cloudAnchorManager.stopLocating();
         }
     }
+//    private void onTapListener(HitTestResult hitTestResult, MotionEvent motionEvent) {
+//        hitTestResult.getNode().getName();
+//
+//    }
 
     private void onClick_branch(){
 //        for (AnchorVisual visuals : anchorVisuals.values()){
+//
 //            visuals.getAnchorNode().setOnTapListener(this::onTapListener);
 //        }
         if(!spinner_selected){
@@ -479,14 +499,20 @@ public class MapBuildingActivity extends AppCompatActivity
                 spinner_branch.setVisibility(View.VISIBLE);
                 newBranchButton.setText("CrossNode Selected");
                 newBranchButton.setVisibility(View.VISIBLE);
+                actionButton.setVisibility(View.INVISIBLE);
+                manualButton.setEnabled(false);
+                finishButton.setEnabled(false);
             });
-            setupSpinner(AnchorNames_major);
+            setupSpinner(AnchorNames_major, spinner_branch);
             spinner_selected = true;
         } else{
             runOnUiThread(() -> {
-                statusText.setText("Select a cross node from Spinner");
+                statusText.setText("Click Continue Button to add a new Anchor");
                 spinner_branch.setVisibility(View.INVISIBLE);
                 newBranchButton.setText("New Branch");
+                actionButton.setVisibility(View.VISIBLE);
+                manualButton.setEnabled(true);
+                finishButton.setEnabled(true);
             });
             prev_anchorName = spinner_branch.getSelectedItem().toString();
             spinner_selected = false;
@@ -495,34 +521,61 @@ public class MapBuildingActivity extends AppCompatActivity
 
     private void onClick_finish(){
         finish = true;
-        mylinearLayout_buttons.setVisibility(View.GONE);
-//        finishButton.setVisibility(View.GONE);
-        // connect the first and last anchor
-
-//        anchorMap.addEdge((String) AnchorNames.get(AnchorNames.size()-1),
-//                (String) AnchorNames.get(0));
-
+        runOnUiThread(() -> {
+            mylinearLayout_buttons.setVisibility(View.GONE);
+            actionButton.setVisibility(View.INVISIBLE);
+        });
         currentDemoStep = DemoStep.SaveMap;
         advanceDemo();
     }
 
+    private void onClick_type(){
+
+        int radioId = radioGroup.getCheckedRadioButtonId();
+        radioButton = findViewById(radioId);
+        String node_type = (String)radioButton.getText();
+        if(node_type.equals("Main Node")){
+            nodeType = NodeType.Major;
+        }
+        if(node_type.equals("Auxiliary Node")){
+            nodeType = NodeType.Minor;
+        }
+        // Get start point anchor ID for "LookForAnchor"
+        runOnUiThread(() -> {
+            // Then give a name to the Node
+            mylinearLayout.setVisibility(View.VISIBLE);
+            radioGroup.setVisibility(View.INVISIBLE);
+            statusText.setText("Give a name for the new anchor");
+        });
+    }
+
     private void onClick_submit(){
         curr_anchorName = nameInput.getText().toString();
+        anchorID_NamePairs.put(curr_anchorName, anchorID);
         if(AnchorNames.contains(curr_anchorName)){
             statusText.setText("Names repeated, please submit a new Name");
         }
         else{
             AnchorNames.add(curr_anchorName);
-    //        AnchorNames.add(String.format("Anchor %d", saveCount - 1));
-            NodeType nodetype = NodeType.Minor;
-            if(curr_anchorName.contains("major") || curr_anchorName.contains("Major") ) {
-                nodetype = NodeType.Major;
+            if(nodeType == NodeType.Major){
                 AnchorNames_major.add(curr_anchorName);
             }
-            else if(curr_anchorName.contains("Minor") || curr_anchorName.contains("Minor")){
-                nodetype = NodeType.Minor;
-            }
-            addToMap(curr_anchorName, prev_anchorName, anchorID, current_anchorPose, nodetype);
+//            NodeType nodetype = NodeType.Minor;
+//            if(curr_anchorName.contains("major") || curr_anchorName.contains("Major") ) {
+//                nodetype = NodeType.Major;
+//                AnchorNames_major.add(curr_anchorName);
+//            }
+//            if(curr_anchorName.contains("aux") || curr_anchorName.contains("Aux")){
+//                nodetype = NodeType.Minor;
+//            }
+//            else{
+//                nodetype = NodeType.Major;
+//                AnchorNames_major.add(curr_anchorName);
+//            }
+            addToMap(curr_anchorName, prev_anchorName, anchorID, current_anchorPose, nodeType);
+            if( prev_anchorName != null)
+                addLineBetweenPoints(anchorVisuals.get(anchorID_NamePairs.get(curr_anchorName)).getAnchorNode(),
+                        anchorVisuals.get(anchorID_NamePairs.get(prev_anchorName)).getAnchorNode());
             runOnUiThread(() -> {
                 mylinearLayout.setVisibility(View.GONE);
                 //Here we can choose if add new branch or finish or continue
@@ -533,32 +586,107 @@ public class MapBuildingActivity extends AppCompatActivity
             });
             currentDemoStep = DemoStep.CreateAnotherLocalAnchor;
 
-            prev_anchorName = curr_anchorName;//AnchorNames.get(AnchorNames.size()-1);
+            prev_anchorName = curr_anchorName;
 
+            //Set name for the rendered AnchorNode
+            anchorVisuals.get(anchorID).getAnchorNode().setName(curr_anchorName);
+            //Set AnchorBoard for the rendered AnchorNode
             Vector3 localPos = new Vector3(0.0f, 0.5f * 0.55f, 0.0f);
             AnchorBoard anchorBoard = new AnchorBoard(this, curr_anchorName, 0.5f, localPos);
             anchorBoard.setParent(anchorVisuals.get(anchorID).getAnchorNode());
         }
     }
 
-
-    private void addToMap(String curr_AnchorName, String prev_anchorName, String AnchorID, Pose curr_pose, NodeType AnchorType){
-        if (prev_anchorName == null){
-//            anchorMap.addNode((String) AnchorNames.get(AnchorNames.size()-1), AnchorID, pose_last, AnchorType);
-            anchorMap.addNode(curr_AnchorName, AnchorID, curr_pose, AnchorType);
+    private void onClick_connect(){
+//        if (visualStatus == VisualStatus.StartManuallyConnect){
+//            for (AnchorVisual visuals : anchorVisuals.values()){
+//                visuals.setStatus(true);
+//            }
+//        }
+//        else if(visualStatus == VisualStatus.confirm) {
+//            for (AnchorVisual visuals : anchorVisuals.values()) {
+//                if(visuals.getName()!=null){
+//                    anchorMap.addEdge(curr_AnchorName, prev_anchorName);
+//                }
+//            }
+//        }
+        if(AnchorNames.size() == 1){
+            return;
         }
-        else{
-            //"" is the current located anchor
-//            anchorMap.addNode(curr_AnchorName, AnchorID, curr_pose, AnchorType);
-//            anchorMap.addEdge((String) AnchorNames.get(AnchorNames.size()-1),
-//                    (String) AnchorNames.get(AnchorNames.size()-2));
-            anchorMap.addNode(curr_AnchorName, AnchorID, curr_pose, AnchorType);
-            anchorMap.addEdge(curr_AnchorName, prev_anchorName);
+        setupSpinner(AnchorNames, spinner_manual1);
+        setupSpinner(AnchorNames, spinner_manual2);
+        runOnUiThread(() -> {
+            //Here we only enable two spinner and a submit button to manually connect two nodes
+            mylinearLayout.setVisibility(View.GONE);
+            mylinearLayout_buttons.setVisibility(View.GONE);
+            actionButton.setVisibility(View.GONE);
+            statusText.setText("Manually select two nodes to connect them");
+            linearLayout_manual.setVisibility(View.VISIBLE);
+        });
+    }
+    private void onClick_submitconnection(){
+        String selected_anchorName1 = spinner_manual1.getSelectedItem().toString();
+        String selected_anchorName2 = spinner_manual2.getSelectedItem().toString();
+        anchorMap.addEdge(selected_anchorName1, selected_anchorName2);
+        addLineBetweenPoints(anchorVisuals.get(anchorID_NamePairs.get(selected_anchorName1)).getAnchorNode(),
+                anchorVisuals.get(anchorID_NamePairs.get(selected_anchorName2)).getAnchorNode());
+        runOnUiThread(() -> {
+            //Here we only enable two spinner and a submit button to manually connect two nodes
+            mylinearLayout_buttons.setVisibility(View.VISIBLE);
+            actionButton.setVisibility(View.VISIBLE);
+            actionButton.setText("Continue");
+            statusText.setText("Manually select two nodes to connect them");
+            linearLayout_manual.setVisibility(View.GONE);
+        });
+    }
 
+    private void addLineBetweenPoints(AnchorNode anchorNode, AnchorNode lastAnchorNode) {
+        if (lastAnchorNode != null) {
+            anchorNode.setParent(arFragment.getArSceneView().getScene());
+            Vector3 point1, point2;
+            point1 = lastAnchorNode.getWorldPosition();
+            point2 = anchorNode.getWorldPosition();
+
+    /*
+        First, find the vector extending between the two points and define a look rotation
+        in terms of this Vector.
+    */
+            final Vector3 difference = Vector3.subtract(point1, point2);
+            final Vector3 directionFromTopToBottom = difference.normalized();
+            final Quaternion rotationFromAToB =
+                    Quaternion.lookRotation(directionFromTopToBottom, Vector3.up());
+            MaterialFactory.makeOpaqueWithColor(getApplicationContext(), new Color(0, 255, 244))
+                    .thenAccept(
+                            material -> {
+                            /* Then, create a rectangular prism, using ShapeFactory.makeCube() and use the difference vector
+                                   to extend to the necessary length.  */
+                                ModelRenderable model = ShapeFactory.makeCube(
+                                        new Vector3(.01f, .01f, difference.length()),
+                                        Vector3.zero(), material);
+                            /* Last, set the world rotation of the node to the rotation calculated earlier and set the world position to
+                                   the midpoint between the given points . */
+                                Node node = new Node();
+                                node.setParent(anchorNode);
+                                node.setRenderable(model);
+                                node.setWorldPosition(Vector3.add(point1, point2).scaled(.5f));
+                                node.setWorldRotation(rotationFromAToB);
+                            }
+                    );
+            lastAnchorNode = anchorNode;
         }
     }
 
-    public void setupSpinner(ArrayList<String> anchorNames_major){
+    private void addToMap(String curr_AnchorName, String prev_anchorName, String AnchorID, Pose curr_pose, NodeType AnchorType){
+        if (prev_anchorName == null){
+            anchorMap.addNode(curr_AnchorName, AnchorID, curr_pose, AnchorType);
+        }
+        else{
+            anchorMap.addNode(curr_AnchorName, AnchorID, curr_pose, AnchorType);
+            anchorMap.addEdge(curr_AnchorName, prev_anchorName);
+        }
+    }
+
+    public void setupSpinner(ArrayList<String> anchorNames_major, Spinner spinner){
         ArrayList<String> anchorlist = new ArrayList<String>();
         int n = 0;
         while(n<anchorNames_major.size()){
@@ -568,11 +696,10 @@ public class MapBuildingActivity extends AppCompatActivity
         ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_spinner_item, anchorlist);
         spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
-        spinner_branch.setAdapter(spinnerAdapter);
+        spinner.setAdapter(spinnerAdapter);
         spinnerAdapter.notifyDataSetChanged();
 
     }
-
 
     public void onRequestPermissionsResult(int requestCode,
                                            String[] permissions, int[] grantResults) {
@@ -612,5 +739,10 @@ public class MapBuildingActivity extends AppCompatActivity
         Major,                  ///< node that represents important and meaningful location
         Minor,                  ///< node that used for tracking and accuracy improve.
         Cross,                  ///< node where new graph branch is generated
+    }
+    enum VisualStatus{             ///< classify nodes into 3 types
+        StartManuallyConnect,                  ///< node that represents important and meaningful location
+        confirm,                  ///< node that used for tracking and accuracy improve.
+                           ///< node where new graph branch is generated
     }
 }
