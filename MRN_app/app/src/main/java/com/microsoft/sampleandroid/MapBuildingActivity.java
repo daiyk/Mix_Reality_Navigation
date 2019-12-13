@@ -22,13 +22,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.ar.core.Anchor;
-import com.google.ar.core.Camera;
 import com.google.ar.core.HitResult;
 import com.google.ar.core.Plane;
 import com.google.ar.core.Pose;
 import com.google.ar.sceneform.AnchorNode;
 import com.google.ar.sceneform.ArSceneView;
-import com.google.ar.sceneform.HitTestResult;
 import com.google.ar.sceneform.Node;
 import com.google.ar.sceneform.Scene;
 import com.google.ar.sceneform.math.Quaternion;
@@ -38,17 +36,10 @@ import com.google.ar.sceneform.rendering.Material;
 import com.google.ar.sceneform.rendering.MaterialFactory;
 import com.google.ar.sceneform.rendering.ModelRenderable;
 import com.google.ar.sceneform.rendering.ShapeFactory;
-import com.google.ar.sceneform.rendering.ViewRenderable;
 import com.google.ar.sceneform.ux.ArFragment;
 
-import com.google.ar.sceneform.ux.TransformableNode;
-import com.microsoft.azure.spatialanchors.AnchorLocateCriteria;
-import com.microsoft.azure.spatialanchors.AnchorLocatedEvent;
 import com.microsoft.azure.spatialanchors.CloudSpatialAnchor;
 import com.microsoft.azure.spatialanchors.CloudSpatialException;
-import com.microsoft.azure.spatialanchors.LocateAnchorStatus;
-import com.microsoft.azure.spatialanchors.LocateAnchorsCompletedEvent;
-import com.microsoft.azure.spatialanchors.NearAnchorCriteria;
 import com.microsoft.azure.spatialanchors.SessionUpdatedEvent;
 
 import java.text.DecimalFormat;
@@ -56,11 +47,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-
-import javax.vecmath.Vector3d;
 
 public class MapBuildingActivity extends AppCompatActivity
 {
@@ -74,16 +61,9 @@ public class MapBuildingActivity extends AppCompatActivity
     private AzureSpatialAnchorsManager cloudAnchorManager;
     private DemoStep currentDemoStep = DemoStep.Start;
     private boolean enoughDataForSaving;
-    //change this later
-    private static final int numberOfNearbyAnchors = 3;
 
     private final Object progressLock = new Object();
     private final Object renderLock = new Object();
-    private int saveCount = 0;
-    private int anchorFound = 0;
-    private boolean finish = false;
-    private Vector3 lastAnchorPos = new Vector3();
-    private Pose lastAnchorPose;
 
     // Materials
     private static Material failedColor;
@@ -226,7 +206,6 @@ public class MapBuildingActivity extends AppCompatActivity
         if (AzureSpatialAnchorsManager.SpatialAnchorsAccountId.equals("Set me") || AzureSpatialAnchorsManager.SpatialAnchorsAccountKey.equals("Set me")) {
             Toast.makeText(this, "\"Set SpatialAnchorsAccountId and SpatialAnchorsAccountKey in AzureSpatialAnchorsManager.java\"", Toast.LENGTH_LONG)
                     .show();
-
             finish();
         }
 
@@ -261,7 +240,6 @@ public class MapBuildingActivity extends AppCompatActivity
                             if (t instanceof CloudSpatialException) {
                                 exceptionMessage = (((CloudSpatialException) t).getErrorCode().toString());
                             }
-
                             anchorSaveFailed(exceptionMessage);
                             return null;
                         });
@@ -275,7 +253,6 @@ public class MapBuildingActivity extends AppCompatActivity
                     });
                     currentDemoStep = DemoStep.SavingCloudAnchor;
                 }
-
                 break;
 
             case CreateAnotherLocalAnchor:
@@ -285,7 +262,6 @@ public class MapBuildingActivity extends AppCompatActivity
                     mylinearLayout_buttons.setVisibility(View.INVISIBLE);
                 });
                 currentDemoStep = DemoStep.CreateLocalAnchor;
-
                 break;
 
             case SaveMap:
@@ -332,7 +308,6 @@ public class MapBuildingActivity extends AppCompatActivity
                 });
 
                 currentDemoStep = DemoStep.Restart;
-
                 break;
 
             case Restart:
@@ -343,7 +318,6 @@ public class MapBuildingActivity extends AppCompatActivity
 
     //当saveCloudAnchor步骤成功时调用，重置createLocalAnchor或者开始新的query步骤
     private void anchorSaveSuccess(CloudSpatialAnchor result) {
-        saveCount++;
 
         Log.d("ASADemo:", "created anchor: " + anchorID);
         AnchorVisual visual = anchorVisuals.get("");
@@ -353,10 +327,8 @@ public class MapBuildingActivity extends AppCompatActivity
         runOnUiThread(() -> {
             statusText.setText("Select the NodeType");
             //Here we can click Submit button
-//            mylinearLayout.setVisibility(View.VISIBLE);
             radioGroup.setVisibility(View.VISIBLE);
             actionButton.setVisibility(View.INVISIBLE);
-//            finishButton.setVisibility(View.VISIBLE);
         });
         //pos of the last anchor, which is used to compute transformation
 
@@ -377,7 +349,6 @@ public class MapBuildingActivity extends AppCompatActivity
         for (AnchorVisual visual : anchorVisuals.values()) {
             visual.destroy();
         }
-
         anchorVisuals.clear();
     }
 
@@ -410,6 +381,7 @@ public class MapBuildingActivity extends AppCompatActivity
         }
 
         clearVisuals();
+        anchorMap.destory();
     }
 
     // 当criteria定义的寻找目标全部完成时调用，不然一直调用onAnchorLocated（）
@@ -459,7 +431,6 @@ public class MapBuildingActivity extends AppCompatActivity
     }
 
     private void startDemo() {
-        saveCount = 0;
         startNewSession();
         runOnUiThread(() -> {
             scanProgressText.setVisibility(View.GONE);
@@ -478,21 +449,7 @@ public class MapBuildingActivity extends AppCompatActivity
         cloudAnchorManager.start();
     }
 
-    private void stopWatcher() {
-        if (cloudAnchorManager != null) {
-            cloudAnchorManager.stopLocating();
-        }
-    }
-//    private void onTapListener(HitTestResult hitTestResult, MotionEvent motionEvent) {
-//        hitTestResult.getNode().getName();
-//
-//    }
-
     private void onClick_branch(){
-//        for (AnchorVisual visuals : anchorVisuals.values()){
-//
-//            visuals.getAnchorNode().setOnTapListener(this::onTapListener);
-//        }
         if(!spinner_selected){
             runOnUiThread(() -> {
                 statusText.setText("Select a cross node from Spinner");
@@ -520,7 +477,6 @@ public class MapBuildingActivity extends AppCompatActivity
     }
 
     private void onClick_finish(){
-        finish = true;
         runOnUiThread(() -> {
             mylinearLayout_buttons.setVisibility(View.GONE);
             actionButton.setVisibility(View.INVISIBLE);
@@ -560,19 +516,9 @@ public class MapBuildingActivity extends AppCompatActivity
             if(nodeType == NodeType.Major){
                 AnchorNames_major.add(curr_anchorName);
             }
-//            NodeType nodetype = NodeType.Minor;
-//            if(curr_anchorName.contains("major") || curr_anchorName.contains("Major") ) {
-//                nodetype = NodeType.Major;
-//                AnchorNames_major.add(curr_anchorName);
-//            }
-//            if(curr_anchorName.contains("aux") || curr_anchorName.contains("Aux")){
-//                nodetype = NodeType.Minor;
-//            }
-//            else{
-//                nodetype = NodeType.Major;
-//                AnchorNames_major.add(curr_anchorName);
-//            }
+
             addToMap(curr_anchorName, prev_anchorName, anchorID, current_anchorPose, nodeType);
+
             if( prev_anchorName != null)
                 addLineBetweenPoints(anchorVisuals.get(anchorID_NamePairs.get(curr_anchorName)).getAnchorNode(),
                         anchorVisuals.get(anchorID_NamePairs.get(prev_anchorName)).getAnchorNode());
@@ -598,18 +544,6 @@ public class MapBuildingActivity extends AppCompatActivity
     }
 
     private void onClick_connect(){
-//        if (visualStatus == VisualStatus.StartManuallyConnect){
-//            for (AnchorVisual visuals : anchorVisuals.values()){
-//                visuals.setStatus(true);
-//            }
-//        }
-//        else if(visualStatus == VisualStatus.confirm) {
-//            for (AnchorVisual visuals : anchorVisuals.values()) {
-//                if(visuals.getName()!=null){
-//                    anchorMap.addEdge(curr_AnchorName, prev_anchorName);
-//                }
-//            }
-//        }
         if(AnchorNames.size() == 1){
             return;
         }
@@ -624,6 +558,7 @@ public class MapBuildingActivity extends AppCompatActivity
             linearLayout_manual.setVisibility(View.VISIBLE);
         });
     }
+
     private void onClick_submitconnection(){
         String selected_anchorName1 = spinner_manual1.getSelectedItem().toString();
         String selected_anchorName2 = spinner_manual2.getSelectedItem().toString();
@@ -739,10 +674,5 @@ public class MapBuildingActivity extends AppCompatActivity
         Major,                  ///< node that represents important and meaningful location
         Minor,                  ///< node that used for tracking and accuracy improve.
         Cross,                  ///< node where new graph branch is generated
-    }
-    enum VisualStatus{             ///< classify nodes into 3 types
-        StartManuallyConnect,                  ///< node that represents important and meaningful location
-        confirm,                  ///< node that used for tracking and accuracy improve.
-                           ///< node where new graph branch is generated
     }
 }
