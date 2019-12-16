@@ -59,19 +59,22 @@ public class AnchorBoard extends Node {
 
     public void setBoardText(String text)
     {
-        ViewRenderable.builder()
-                .setView(context, R.layout.label_board)
-                .build()
-                .thenAccept(
-                        (renderable) -> {
-                            this.setRenderable(renderable);
-                            TextView textView = (TextView) renderable.getView();
-                            textView.setText(text);
-                        })
-                .exceptionally(
-                        (throwable) -> {
-                            throw new AssertionError("Could not load plane card view.", throwable);
-                        });
+//        ViewRenderable.builder()
+//                .setView(context, R.layout.label_board)
+//                .build()
+//                .thenAccept(
+//                        (renderable) -> {
+//                            this.setRenderable(renderable);
+//                            TextView textView = (TextView) renderable.getView();
+//                            textView.setText(text);
+//                        })
+//                .exceptionally(
+//                        (throwable) -> {
+//                            throw new AssertionError("Could not load plane card view.", throwable);
+//                        });
+        ViewRenderable board_text = (ViewRenderable)this.getRenderable();
+        TextView text_view = (TextView)board_text.getView();
+        text_view.setText(text);
 
     }
     public void onUpdate(FrameTime frameTime) {

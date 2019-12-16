@@ -42,6 +42,7 @@ public class AnchorArrow extends TransformableNode {
         });
     }
 
+    public String targetName=null;
     // context: the context of the application(this), as parent of anchorarrow
     //localPos: relative position of arrow to the camera
     //TransformationSystem: current scene transformation system
@@ -69,14 +70,14 @@ public class AnchorArrow extends TransformableNode {
         }
 
         //set origin targetAnchor point to origin
-        targetAnchor.setWorldPosition(new Vector3(0.0f,0.0f,0.0f));
+        targetAnchor.setWorldPosition(new Vector3(Float.POSITIVE_INFINITY,Float.POSITIVE_INFINITY,Float.POSITIVE_INFINITY));
         ModelRenderable.builder()
                 .setSource(this.context, Uri.parse("scene.sfb"))
                 .build()
                 .thenAccept((renderable) -> {
                     this.setRenderable(renderable);
                     this.setLocalPosition(this.localPos);
-//                    addHighlightToNode(this);
+                    //addHighlightToNode(this);
                     this.select();
                 })
                 .exceptionally(
@@ -92,6 +93,7 @@ public class AnchorArrow extends TransformableNode {
     {
         //set anchor to point to the transformation position
         targetAnchor.setWorldPosition(pos);
+        this.updateTargetBoard(targetName);
     }
 
     //target relative rendering
@@ -114,6 +116,7 @@ public class AnchorArrow extends TransformableNode {
     public void updateTargetBoard(String name)
     {
         targetBoard.setBoardText(name);
+        targetName = name;
     }
     public void setTargetRenderable(Renderable renderable){
         MainThreadContext.runOnUiThread(() -> {
@@ -165,13 +168,22 @@ public class AnchorArrow extends TransformableNode {
         this.setWorldRotation(lookRotation);
 
     }
-
+    public void clear(){
+        targetAnchor.setWorldPosition(new Vector3(Float.POSITIVE_INFINITY,Float.POSITIVE_INFINITY,Float.POSITIVE_INFINITY));
+        this.setTargetEnabled(false);
+        this.setEnabled(false);
+        this.setTargetRenderable(null);
+        targetName = null;
+    }
     public void destroy() {
         MainThreadContext.runOnUiThread(() -> {
+            this.setEnabled(false);
+            this.setTargetEnabled(false);
             targetAnchor.setRenderable(null);
             targetAnchor.setParent(null);
             this.setRenderable(null);
             this.setParent(null);
+            targetName = null;
         });
     }
 

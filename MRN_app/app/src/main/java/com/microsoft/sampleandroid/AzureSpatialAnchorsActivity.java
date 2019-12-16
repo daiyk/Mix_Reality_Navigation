@@ -32,19 +32,15 @@ import com.google.ar.sceneform.AnchorNode;
 import com.google.ar.sceneform.ArSceneView;
 import com.google.ar.sceneform.FrameTime;
 import com.google.ar.sceneform.Scene;
-import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.Color;
 import com.google.ar.sceneform.rendering.Material;
 import com.google.ar.sceneform.rendering.MaterialFactory;
-import com.google.ar.sceneform.rendering.ModelRenderable;
 import com.google.ar.sceneform.rendering.Renderable;
 import com.google.ar.sceneform.rendering.ShapeFactory;
 import com.google.ar.sceneform.ux.ArFragment;
 
 //third-party lib to pick real path from url
-import com.google.ar.sceneform.ux.TransformableNode;
-import com.google.ar.sceneform.ux.TransformationSystem;
 import com.hbisoft.pickit.PickiT;
 import com.hbisoft.pickit.PickiTCallbacks;
 
@@ -99,11 +95,12 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
     private TextView textView;
     private Button navigateButton;
     private Spinner spinner;
-    private Vector3 camRelPose = new Vector3(0.0f, 0.2f, -1.5f);
-    private Vector3 boardLocalPos = new Vector3(0.0f, 0.55f, 0.0f);
+    private final Vector3 camRelPose = new Vector3(0.0f, 0.2f, -1.5f);
+    private final Vector3 boardLocalPos = new Vector3(0.0f, 0.3f, 0.0f);
 
     //navigation relevent
     private float distance;
+    private final float NAVI_LIMIT = 1.0f;
     private AnchorNode sourceAnchorNode = new AnchorNode();
     private boolean navigationInit;
     private AnchorMap anchorMap;
@@ -112,7 +109,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
     private String sourceName = null;
     private String targetName = null;
     private PickiT pickit;
-    private ArrayList<Node> anchorRenderList = new ArrayList<>();
 
 
     //back button detector
@@ -162,9 +158,9 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                             if(statusText.getVisibility()==statusText.INVISIBLE) {
                                 statusText.setVisibility(View.VISIBLE);
                             }
-//                            statusText.setText(String.valueOf(distance));
-                            statusText.setText(String.format("%f, %f, %f",targetPosition.x,targetPosition.y,targetPosition.z));
-                            if (distance < 0.8 ) {
+                            statusText.setText(String.valueOf(distance));
+//                            statusText.setText(String.format("%f, %f, %f",targetPosition.x,targetPosition.y,targetPosition.z));
+                            if (distance < NAVI_LIMIT ) {
                                 advanceDemo();
                             }
                         }
@@ -378,7 +374,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                     }
                     navigationInit = false;
                     //init arrow target
-                    Renderable nodeRenderable = ShapeFactory.makeCube(new Vector3(0.1f,0.1f,0.1f), new Vector3(0.0f, 0.15f, 0.0f), readyColor);
+                    Renderable nodeRenderable = ShapeFactory.makeSphere(0.08f, new Vector3(0.0f, 0.15f, 0.0f), readyColor);
                     arrow.setTargetRenderable(nodeRenderable);
 
 //                    advanceDemo();
@@ -402,18 +398,15 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                     arrow.updateTargetPos(new Vector3(nextAnchorTranslation[0],nextAnchorTranslation[1],nextAnchorTranslation[2]));
                     arrow.updateTargetBoard(nextTarget);
 
-                    if(stack_id.isEmpty()) {
-//                        Renderable render = ShapeFactory.makeCylinder(0.2f, 0.5f, new Vector3(0.f, 0.25f, 0.f), targetColor);
-                        Renderable render = null;
-                        arrow.setTargetRenderable(render);
-                        arrow.setDestinationRenderable();
-                    }
                     // render the map next target as sphere and hold it in anchorvisuals
-//                    Vector3 boardPos = new Vector3(0.0f,  0.5f, 0.0f);
-//                    AnchorBoard nextAnchorRenderBoard = new AnchorBoard(this,"Your Target",0.5f,boardPos);
-//                    targetBoard.setParent(targetAnchor);
 //                    startNewSession();
                     //use localizer to find the anchor and thus improve the accuracy
+                    if(stack_id.isEmpty()) {
+//                        Renderable render = ShapeFactory.makeCylinder(0.2f, 0.5f, new Vector3(0.f, 0.25f, 0.f), targetColor);
+                        arrow.updateTargetBoard("Your destination: " + nextTarget);
+                        arrow.setTargetRenderable(null);
+                        arrow.setDestinationRenderable();
+                    }
                     AnchorLocateCriteria nextCriteria = new AnchorLocateCriteria();
                     //criteria.setBypassCache(true);
                     //不规定而是找到最近的anchor
@@ -456,7 +449,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 //                for (AnchorVisual toDeleteVisual : anchorVisuals.values()) {
 //                    cloudAnchorManager.deleteAnchorAsync(toDeleteVisual.getCloudAnchor());
 //                }
-                arrow.destroy();
+                arrow.clear();
                 destroySession();
                 anchorMap.destory();
 
@@ -465,7 +458,11 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                     statusText.setText("");
                     backButton.setVisibility(View.VISIBLE);
                 });
-
+                sourceAnchorNode = new AnchorNode();
+                optPath = new ArrayList<>();
+                stack_id = new Stack<>();
+                sourceName = null;
+                targetName = null;
                 currentDemoStep = DemoStep.Restart;
                 clearVisuals();
                 break;
@@ -481,9 +478,9 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
         for (AnchorVisual visual : anchorVisuals.values()) {
             arFragment.getArSceneView().getScene().removeChild(visual.getAnchorNode());
             visual.getLocalAnchor().detach();
+            visual.getAnchorNode().setParent(null);
             visual.destroy();
         }
-
         anchorVisuals.clear();
     }
 
@@ -583,12 +580,11 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
             AnchorVisual foundVisual = new AnchorVisual(anchor.getLocalAnchor());
 //            temptargetAnchor = foundVisual.getAnchorNode();
             anchorVisuals.put("", foundVisual);
-
             foundVisual.setCloudAnchor(anchor);
             foundVisual.getAnchorNode().setParent(arFragment.getArSceneView().getScene());
 
             foundVisual.setColor(foundColor);
-            AnchorBoard anchorBoard = new AnchorBoard(this, sourceName, 0.2f, boardLocalPos);
+            AnchorBoard anchorBoard = new AnchorBoard(this, sourceName, 0.5f, boardLocalPos);
             anchorBoard.setParent(foundVisual.getAnchorNode());
             foundVisual.render(arFragment);
 
@@ -598,16 +594,13 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
         } else if (currentDemoStep == DemoStep.NavigationStart) {
             // Render anchors during the navigation process, can be deleted later
             AnchorVisual foundVisual = new AnchorVisual(anchor.getLocalAnchor());
-//            foundVisual.getAnchorNode().setParent(arFragment.getArSceneView().getScene());
-//            AnchorBoard anchorBoard = new AnchorBoard(this, sourceName, 0.5f, boardLocalPos);
-//            foundVisual.setColor(foundColor);
-//            foundVisual.render(arFragment);
+            anchorVisuals.put(anchor.getIdentifier(),foundVisual);
 
             float[] nextLocateAnchor = anchor.getLocalAnchor().getPose().getTranslation();
             arrow.updateTargetPos(new Vector3(nextLocateAnchor[0],nextLocateAnchor[1],nextLocateAnchor[2]));
-
         } else if (currentDemoStep == DemoStep.NavigationEnd) {
             AnchorVisual foundVisual = new AnchorVisual(anchor.getLocalAnchor());
+            anchorVisuals.put(anchor.getIdentifier(),foundVisual);
             float[] nextLocateAnchor = foundVisual.getAnchorNode().getAnchor().getPose().getTranslation();
             arrow.updateTargetPos(new Vector3(nextLocateAnchor[0],nextLocateAnchor[1],nextLocateAnchor[2]));
         }
@@ -646,6 +639,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 
     private void onClickNavigateButton() {
         if (currentDemoStep == DemoStep.ChooseStartPoint) {
+
             // Use Spinner
             sourceName = spinner.getSelectedItem().toString();
             startAnchorID = anchorMap.getNode(sourceName).AnchorID;
