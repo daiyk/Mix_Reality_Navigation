@@ -69,7 +69,7 @@ public class AnchorArrow extends TransformableNode {
         }
 
         //set origin targetAnchor point to origin
-        targetAnchor.setWorldPosition(new Vector3(0.0f,0.0f,0.0f));
+        targetAnchor.setWorldPosition(new Vector3(Float.POSITIVE_INFINITY,Float.POSITIVE_INFINITY,Float.POSITIVE_INFINITY));
         ModelRenderable.builder()
                 .setSource(this.context, Uri.parse("scene.sfb"))
                 .build()
@@ -139,9 +139,16 @@ public class AnchorArrow extends TransformableNode {
         this.setWorldRotation(lookRotation);
 
     }
-
+    public void clear(){
+        targetAnchor.setWorldPosition(new Vector3(Float.POSITIVE_INFINITY,Float.POSITIVE_INFINITY,Float.POSITIVE_INFINITY));
+        this.setTargetEnabled(false);
+        this.setEnabled(false);
+        this.setTargetRenderable(null);
+    }
     public void destroy() {
         MainThreadContext.runOnUiThread(() -> {
+            this.setEnabled(false);
+            this.setTargetEnabled(false);
             targetAnchor.setRenderable(null);
             targetAnchor.setParent(null);
             this.setRenderable(null);
