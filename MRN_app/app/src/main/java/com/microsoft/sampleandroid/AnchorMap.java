@@ -14,9 +14,9 @@ import com.google.ar.core.Pose;
 import com.google.ar.sceneform.math.Vector3;
 
 public class AnchorMap {
-    static String TAG = "AnchorMap";
     private int NodesID = 0;
-    private HashMap<String,Integer> mapping = new HashMap<>();
+    static String TAG = "AnchorMap";
+    private HashMap<String,Integer> mapping = new HashMap<>(); //anchor name to anchor index mapping
     private ArrayList<ArrayList<Integer>> adjacencyList = new ArrayList<ArrayList<Integer>>();
     private ArrayList<Node> NodeList = new ArrayList<>();
     private HashMap<Integer,Float[]> anchorPos = new HashMap<>();
@@ -270,6 +270,7 @@ public class AnchorMap {
         NodeList = new ArrayList<>();
         anchorPos.clear();
         anchorPos = new HashMap<>();
+        NodesID = 0;
     }
 }
 

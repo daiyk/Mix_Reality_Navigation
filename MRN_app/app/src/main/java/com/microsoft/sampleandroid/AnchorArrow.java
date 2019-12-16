@@ -58,7 +58,7 @@ public class AnchorArrow extends TransformableNode {
         this.getScaleController().setMinScale(0.1f);
         targetAnchor.setParent(scene);
         Vector3 boardPos = new Vector3(0.0f,  0.5f, 0.0f);
-        targetBoard = new AnchorBoard(context,"Your Target",0.5f,boardPos);
+        targetBoard = new AnchorBoard(context,"Init Name",0.5f,boardPos);
         targetBoard.setParent(targetAnchor);
     }
     //@overide
@@ -94,6 +94,11 @@ public class AnchorArrow extends TransformableNode {
         targetAnchor.setWorldPosition(pos);
     }
 
+    //target relative rendering
+    public void setTargetEnabled(Boolean open){
+        targetAnchor.setEnabled(open);
+    }
+    public boolean isTargetEnabled() {return targetAnchor.isEnabled();}
     public Vector3 getTargetPos(){
         return targetAnchor.getWorldPosition();
     }
@@ -106,7 +111,17 @@ public class AnchorArrow extends TransformableNode {
             targetAnchor = Anchor;
         }
     }
-    public void setTargetRenderable(Material color){
+    public void updateTargetBoard(String name)
+    {
+        targetBoard.setBoardText(name);
+    }
+    public void setTargetRenderable(Renderable renderable){
+        MainThreadContext.runOnUiThread(() -> {
+//            Renderable render = ShapeFactory.makeCylinder(0.2f,0.5f,new Vector3(0.f,0.25f,0.f),color);
+            targetAnchor.setRenderable(renderable);
+        });
+    }
+    public void setDestinationRenderable(){
         TransformableNode destinationAnchor = new TransformableNode(this.getTransformationSystem());
         MainThreadContext.runOnUiThread(() -> {
 //            Renderable render = ShapeFactory.makeCylinder(0.2f,0.5f,new Vector3(0.f,0.25f,0.f),color);
@@ -116,9 +131,11 @@ public class AnchorArrow extends TransformableNode {
                     .thenAccept((renderable) -> {
                         destinationAnchor.setRenderable(renderable);
                         destinationAnchor.setLocalRotation(Quaternion.axisAngle(new Vector3(180f, 0f, 0), 180f));
-                        destinationAnchor.setLocalPosition(new Vector3(0.f,0.5f,0.f));
+                        destinationAnchor.setLocalPosition(new Vector3(0.f, 0.5f, 0.f));
                         destinationAnchor.getScaleController().setMaxScale(0.052f);
                         destinationAnchor.getScaleController().setMinScale(0.05f);
+                        destinationAnchor.setParent(targetAnchor);
+                        
                     })
                     .exceptionally(
                             throwable -> {
@@ -128,12 +145,7 @@ public class AnchorArrow extends TransformableNode {
                                 toast.show();
                                 return null;
                             });
-            destinationAnchor.setParent(targetAnchor);
-//            targetAnchor.setRenderable(render);
         });
-    }
-    public void setTargetEnabled(Boolean open){
-        targetAnchor.setEnabled(open);
     }
 
     public void onUpdate(FrameTime frameTime) {
