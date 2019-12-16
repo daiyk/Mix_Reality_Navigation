@@ -42,6 +42,7 @@ public class AnchorArrow extends TransformableNode {
         });
     }
 
+    public String targetName=null;
     // context: the context of the application(this), as parent of anchorarrow
     //localPos: relative position of arrow to the camera
     //TransformationSystem: current scene transformation system
@@ -92,6 +93,7 @@ public class AnchorArrow extends TransformableNode {
     {
         //set anchor to point to the transformation position
         targetAnchor.setWorldPosition(pos);
+        this.updateTargetBoard(targetName);
     }
 
     //target relative rendering
@@ -114,11 +116,38 @@ public class AnchorArrow extends TransformableNode {
     public void updateTargetBoard(String name)
     {
         targetBoard.setBoardText(name);
+        targetName = name;
     }
     public void setTargetRenderable(Renderable renderable){
         MainThreadContext.runOnUiThread(() -> {
 //            Renderable render = ShapeFactory.makeCylinder(0.2f,0.5f,new Vector3(0.f,0.25f,0.f),color);
             targetAnchor.setRenderable(renderable);
+        });
+    }
+    public void setDestinationRenderable(){
+        TransformableNode destinationAnchor = new TransformableNode(this.getTransformationSystem());
+        MainThreadContext.runOnUiThread(() -> {
+//            Renderable render = ShapeFactory.makeCylinder(0.2f,0.5f,new Vector3(0.f,0.25f,0.f),color);
+            ModelRenderable.builder()
+                    .setSource(this.context, Uri.parse("destination.sfb"))
+                    .build()
+                    .thenAccept((renderable) -> {
+                        destinationAnchor.setRenderable(renderable);
+                        destinationAnchor.setLocalRotation(Quaternion.axisAngle(new Vector3(180f, 0f, 0), 180f));
+                        destinationAnchor.setLocalPosition(new Vector3(0.f, 0.5f, 0.f));
+                        destinationAnchor.getScaleController().setMaxScale(0.052f);
+                        destinationAnchor.getScaleController().setMinScale(0.05f);
+                        destinationAnchor.setParent(targetAnchor);
+
+                    })
+                    .exceptionally(
+                            throwable -> {
+                                Toast toast =
+                                        Toast.makeText(this.context, "Unable to load andy renderable", Toast.LENGTH_LONG);
+                                toast.setGravity(Gravity.CENTER, 0, 0);
+                                toast.show();
+                                return null;
+                            });
         });
     }
 
@@ -144,6 +173,7 @@ public class AnchorArrow extends TransformableNode {
         this.setTargetEnabled(false);
         this.setEnabled(false);
         this.setTargetRenderable(null);
+        targetName = null;
     }
     public void destroy() {
         MainThreadContext.runOnUiThread(() -> {
@@ -153,6 +183,7 @@ public class AnchorArrow extends TransformableNode {
             targetAnchor.setParent(null);
             this.setRenderable(null);
             this.setParent(null);
+            targetName = null;
         });
     }
 

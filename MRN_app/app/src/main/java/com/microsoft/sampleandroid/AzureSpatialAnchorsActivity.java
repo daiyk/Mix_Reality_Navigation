@@ -100,7 +100,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 
     //navigation relevent
     private float distance;
-    private final float NAVI_LIMIT = 1.5f;
+    private final float NAVI_LIMIT = 1.0f;
     private AnchorNode sourceAnchorNode = new AnchorNode();
     private boolean navigationInit;
     private AnchorMap anchorMap;
@@ -391,21 +391,21 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                     Pose nextAnchorPos = anchorMap.getPos(nextTarget);
                     float[] nextAnchorTranslationMap = nextAnchorPos.getTranslation();
                     float[] nextAnchorTranslation = sourceAnchorPos.transformPoint(sourceMapPos.transformPoint(nextAnchorTranslationMap));
-
-                    arrow.updateTargetPos(new Vector3(nextAnchorTranslation[0],nextAnchorTranslation[1],nextAnchorTranslation[2]));
-                    arrow.updateTargetBoard(nextTarget);
                     if(!arrow.isEnabled()) {
                         arrow.setEnabled(true);
                         arrow.setTargetEnabled(true);
                     }
+                    arrow.updateTargetPos(new Vector3(nextAnchorTranslation[0],nextAnchorTranslation[1],nextAnchorTranslation[2]));
+                    arrow.updateTargetBoard(nextTarget);
 
                     // render the map next target as sphere and hold it in anchorvisuals
 //                    startNewSession();
                     //use localizer to find the anchor and thus improve the accuracy
                     if(stack_id.isEmpty()) {
-                        Renderable render = ShapeFactory.makeCylinder(0.2f, 0.5f, new Vector3(0.f, 0.25f, 0.f), targetColor);
+//                        Renderable render = ShapeFactory.makeCylinder(0.2f, 0.5f, new Vector3(0.f, 0.25f, 0.f), targetColor);
                         arrow.updateTargetBoard("Your destination: " + nextTarget);
-                        arrow.setTargetRenderable(render);
+                        arrow.setTargetRenderable(null);
+                        arrow.setDestinationRenderable();
                     }
                     AnchorLocateCriteria nextCriteria = new AnchorLocateCriteria();
                     //criteria.setBypassCache(true);
@@ -598,7 +598,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 
             float[] nextLocateAnchor = anchor.getLocalAnchor().getPose().getTranslation();
             arrow.updateTargetPos(new Vector3(nextLocateAnchor[0],nextLocateAnchor[1],nextLocateAnchor[2]));
-
         } else if (currentDemoStep == DemoStep.NavigationEnd) {
             AnchorVisual foundVisual = new AnchorVisual(anchor.getLocalAnchor());
             anchorVisuals.put(anchor.getIdentifier(),foundVisual);

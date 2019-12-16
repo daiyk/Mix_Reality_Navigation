@@ -74,3 +74,8 @@ sceneform.asset('sampledata/scene.gltf',
         'default',
         'sampledata/scene.sfa',
         'src/main/assets/scene')
+
+sceneform.asset('sampledata/destination.gltf',
+        'default',
+        'sampledata/destination.sfa',
+        'src/main/assets/destination')
