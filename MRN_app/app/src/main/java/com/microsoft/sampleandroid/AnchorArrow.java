@@ -58,7 +58,7 @@ public class AnchorArrow extends TransformableNode {
         this.getScaleController().setMinScale(0.1f);
         targetAnchor.setParent(scene);
         Vector3 boardPos = new Vector3(0.0f,  0.5f, 0.0f);
-        targetBoard = new AnchorBoard(context,"Your Target",0.5f,boardPos);
+        targetBoard = new AnchorBoard(context,"Init Name",0.5f,boardPos);
         targetBoard.setParent(targetAnchor);
     }
     //@overide
@@ -94,6 +94,11 @@ public class AnchorArrow extends TransformableNode {
         targetAnchor.setWorldPosition(pos);
     }
 
+    //target relative rendering
+    public void setTargetEnabled(Boolean open){
+        targetAnchor.setEnabled(open);
+    }
+    public boolean isTargetEnabled() {return targetAnchor.isEnabled();}
     public Vector3 getTargetPos(){
         return targetAnchor.getWorldPosition();
     }
@@ -106,14 +111,15 @@ public class AnchorArrow extends TransformableNode {
             targetAnchor = Anchor;
         }
     }
-    public void setTargetRenderable(Material color){
-        MainThreadContext.runOnUiThread(() -> {
-            Renderable render = ShapeFactory.makeCylinder(0.2f,0.5f,new Vector3(0.f,0.25f,0.f),color);
-            targetAnchor.setRenderable(render);
-        });
+    public void updateTargetBoard(String name)
+    {
+        targetBoard.setBoardText(name);
     }
-    public void setTargetEnabled(Boolean open){
-        targetAnchor.setEnabled(open);
+    public void setTargetRenderable(Renderable renderable){
+        MainThreadContext.runOnUiThread(() -> {
+//            Renderable render = ShapeFactory.makeCylinder(0.2f,0.5f,new Vector3(0.f,0.25f,0.f),color);
+            targetAnchor.setRenderable(renderable);
+        });
     }
 
     public void onUpdate(FrameTime frameTime) {

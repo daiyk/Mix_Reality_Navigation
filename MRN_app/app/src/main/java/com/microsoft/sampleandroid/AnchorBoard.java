@@ -7,6 +7,7 @@ import com.google.ar.sceneform.FrameTime;
 import com.google.ar.sceneform.Node;
 import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
+import com.google.ar.sceneform.rendering.Renderable;
 import com.google.ar.sceneform.rendering.ViewRenderable;
 
 public class AnchorBoard extends Node {
@@ -56,6 +57,23 @@ public class AnchorBoard extends Node {
 
     }
 
+    public void setBoardText(String text)
+    {
+        ViewRenderable.builder()
+                .setView(context, R.layout.label_board)
+                .build()
+                .thenAccept(
+                        (renderable) -> {
+                            this.setRenderable(renderable);
+                            TextView textView = (TextView) renderable.getView();
+                            textView.setText(text);
+                        })
+                .exceptionally(
+                        (throwable) -> {
+                            throw new AssertionError("Could not load plane card view.", throwable);
+                        });
+
+    }
     public void onUpdate(FrameTime frameTime) {
 
         // Typically, getScene() will never return null because onUpdate() is only called when the node
