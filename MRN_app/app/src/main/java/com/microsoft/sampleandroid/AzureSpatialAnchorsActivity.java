@@ -646,7 +646,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
 
     private void onClickNavigateButton() {
         if (currentDemoStep == DemoStep.ChooseStartPoint) {
-
             // Use Spinner
             sourceName = spinner.getSelectedItem().toString();
             startAnchorID = anchorMap.getNode(sourceName).AnchorID;

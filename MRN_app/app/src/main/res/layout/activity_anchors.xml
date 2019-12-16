@@ -102,16 +102,15 @@
             android:layout_height="wrap_content"
             android:layout_below="@+id/radioGroup"
             android:layout_centerHorizontal="true"
-            android:layout_marginTop="25dp"
+            android:layout_marginTop="0dp"
             android:text="TextView" />
 
         <Spinner
             android:id="@+id/spinner"
             style="@style/Widget.AppCompat.Spinner.Underlined"
+            android:layout_below="@+id/backButton"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_above="@+id/scanProgressText"
-            android:layout_marginBottom="537dp" />
+            android:layout_height="wrap_content" />
 
 
     </RelativeLayout>

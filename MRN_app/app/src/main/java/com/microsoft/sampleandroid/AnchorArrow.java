@@ -135,7 +135,7 @@ public class AnchorArrow extends TransformableNode {
                         destinationAnchor.getScaleController().setMaxScale(0.052f);
                         destinationAnchor.getScaleController().setMinScale(0.05f);
                         destinationAnchor.setParent(targetAnchor);
-                        
+
                     })
                     .exceptionally(
                             throwable -> {
