@@ -14,8 +14,8 @@ import com.google.ar.core.Pose;
 import com.google.ar.sceneform.math.Vector3;
 
 public class AnchorMap {
-    static int NodesID = 0;
     static String TAG = "AnchorMap";
+    private int NodesID = 0;
     private HashMap<String,Integer> mapping = new HashMap<>();
     private ArrayList<ArrayList<Integer>> adjacencyList = new ArrayList<ArrayList<Integer>>();
     private ArrayList<Node> NodeList = new ArrayList<>();

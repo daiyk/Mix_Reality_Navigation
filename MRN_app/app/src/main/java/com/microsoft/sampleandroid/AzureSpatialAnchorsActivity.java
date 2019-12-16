@@ -102,7 +102,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
     private float distance;
     private AnchorNode sourceAnchorNode = new AnchorNode();
     private boolean navigationInit;
-    private AnchorMap anchorMap;
+    private AnchorMap anchorMap = null;
     ArrayList<String> optPath = new ArrayList<>();
     Stack<String> stack_id = new Stack<>();
     private String sourceName = null;
@@ -115,6 +115,8 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
         synchronized (renderLock) {
             destroySession();
             finish();
+            if(anchorMap != null)
+                anchorMap.destory();
         }
     }
 
@@ -158,7 +160,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                                 statusText.setVisibility(View.VISIBLE);
                             }
 //                            statusText.setText(String.valueOf(distance));
-                            statusText.setText(String.format("%f, %f, %f",targetPosition.x,targetPosition.y,targetPosition.z));
+//                            statusText.setText(String.format("%f, %f, %f",targetPosition.x,targetPosition.y,targetPosition.z));
                             if (distance < 0.5 ) {
                                 advanceDemo();
                             }
@@ -463,7 +465,6 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
             cloudAnchorManager.stop();
             cloudAnchorManager = null;
         }
-
         clearVisuals();
     }
 

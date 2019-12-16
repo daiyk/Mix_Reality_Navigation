@@ -104,7 +104,7 @@ public class MapBuildingActivity extends AppCompatActivity
     private Spinner spinner_manual1;
     private Spinner spinner_manual2;
     private Button connectsubmitButton;
-
+    private Button presave_button;
 
     private final LinkedHashMap<String,String> anchorNamesIdentifier = new LinkedHashMap<>();
     public void exitDemoClicked(View v) {
@@ -164,8 +164,10 @@ public class MapBuildingActivity extends AppCompatActivity
         connectsubmitButton = findViewById(R.id.connect_submit);
         spinner_manual1 = findViewById(R.id.spinner_manual1);
         spinner_manual2 = findViewById(R.id.spinner_manual2);
-        connectsubmitButton .setOnClickListener((View v) -> onClick_submitconnection());
+        connectsubmitButton.setOnClickListener((View v) -> onClick_submitconnection());
 
+        presave_button = findViewById(R.id.presave_button);
+        presave_button.setOnClickListener((View v) -> onClick_presave());
 
         anchorMap = new AnchorMap();
 
@@ -283,7 +285,7 @@ public class MapBuildingActivity extends AppCompatActivity
 
                 } else {
                     FileManager file = new FileManager();
-                    file.saveMap("test",anchorMap);
+                    file.saveMap("Map",anchorMap);
                     currentDemoStep = DemoStep.End;
                     Toast.makeText(this, "save map",Toast.LENGTH_LONG).show();
                     // Permission has already been granted
@@ -292,17 +294,15 @@ public class MapBuildingActivity extends AppCompatActivity
                         backButton.setVisibility(View.VISIBLE);
                     });
                 }
-                break;
 
             case End:
-                for (AnchorVisual toDeleteVisual : anchorVisuals.values()) {
-                    cloudAnchorManager.deleteAnchorAsync(toDeleteVisual.getCloudAnchor());
-                }
+
                 //set arrow invisible
                 destroySession();
 
                 runOnUiThread(() -> {
                     actionButton.setText("Restart");
+                    actionButton.setVisibility(View.VISIBLE);
                     statusText.setText("");
                     backButton.setVisibility(View.VISIBLE);
                 });
@@ -575,6 +575,11 @@ public class MapBuildingActivity extends AppCompatActivity
         });
     }
 
+    private void onClick_presave(){
+        FileManager file = new FileManager();
+        file.saveMap("Map",anchorMap);
+    }
+
     private void addLineBetweenPoints(AnchorNode anchorNode, AnchorNode lastAnchorNode) {
         if (lastAnchorNode != null) {
             anchorNode.setParent(arFragment.getArSceneView().getScene());
@@ -673,6 +678,5 @@ public class MapBuildingActivity extends AppCompatActivity
     enum NodeType {             ///< classify nodes into 3 types
         Major,                  ///< node that represents important and meaningful location
         Minor,                  ///< node that used for tracking and accuracy improve.
-        Cross,                  ///< node where new graph branch is generated
     }
 }

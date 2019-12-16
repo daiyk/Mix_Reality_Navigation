@@ -20,19 +20,21 @@
 
         <Button
             android:id="@+id/backButton"
+            style="@style/Widget.AppCompat.Button.Colored"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
             android:layout_alignParentTop="true"
+            android:onClick="exitDemoClicked"
             android:text="@string/back_button_text"
-            android:textAllCaps="false"
-            android:onClick = "exitDemoClicked"/>
+            android:textAllCaps="false" />
 
         <Spinner
             android:id="@+id/spinner_branch"
             android:layout_below="@+id/backButton"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
+            style="@style/Widget.AppCompat.Spinner.Underlined"
+            android:layout_height="50dp"
             android:layout_marginTop="50dp"
             android:visibility="gone"/>
 
@@ -57,10 +59,13 @@
 
         <Button
             android:id="@+id/actionButton"
+            style="@style/Widget.AppCompat.Button.Colored"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
             android:layout_alignParentBottom="true"
+            android:allowUndo="false"
+            android:alpha="0.75"
             android:text=""
             android:textAllCaps="false" />
 
@@ -74,20 +79,23 @@
 
             <Spinner
                 android:id="@+id/spinner_manual1"
-                android:layout_marginTop="50dp"
+                style="@style/Widget.AppCompat.Spinner.Underlined"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="50dp"
+                android:layout_marginTop="50dp" />
 
             <Spinner
                 android:id="@+id/spinner_manual2"
+                style="@style/Widget.AppCompat.Spinner.Underlined"
                 android:layout_width="match_parent"
-                android:layout_height="wrap_content" />
+                android:layout_height="50dp" />
 
             <Button
                 android:id="@+id/connect_submit"
+                style="@android:style/Widget.Holo.Light.Button.Toggle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Submit" />
+                android:text="@string/connect_button_text" />
         </LinearLayout>
 
         <RadioGroup
@@ -102,19 +110,20 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:checked="true"
-                android:text="Main Node" />
+                android:text="@string/main_node_text" />
 
             <RadioButton
                 android:id="@+id/Aux"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Auxiliary Node" />
+                android:text="@string/aux_node_text" />
 
             <Button
                 android:id="@+id/typeButton"
+                style="@style/Widget.AppCompat.Button.Colored"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Submit" />
+                android:text="@string/type_button_text" />
         </RadioGroup>
 
         <LinearLayout
@@ -130,21 +139,36 @@
 
             <Button
                 android:id="@+id/manualButton"
+                style="@style/Widget.AppCompat.Button.Colored"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Manually Connect" />
+                android:allowUndo="false"
+                android:alpha="0.75"
+                android:text="@string/manual_button_text" />
 
             <Button
                 android:id="@+id/newBranchButton"
+                style="@style/Widget.AppCompat.Button.Colored"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="New Branch" />
+                android:allowUndo="true"
+                android:alpha="0.75"
+                android:text="@string/branch_button_text" />
+
+            <Button
+                android:id="@+id/presave_button"
+                style="@android:style/Widget.Holo.Light.Button.Toggle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="save current map" />
 
             <Button
                 android:id="@+id/finishButton"
+                style="@android:style/Widget.Holo.Light.Button.Toggle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Finish mapping"
+                android:alpha="0.75"
+                android:text="@string/finish_button_text"
                 android:textAllCaps="false" />
 
         </LinearLayout>
@@ -176,9 +200,10 @@
 
             <Button
                 android:id="@+id/submitButton"
+                style="@android:style/Widget.Holo.Light.Button.Toggle"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Submit" />
+                android:text="@string/submit_button_text" />
         </LinearLayout>
 
     </RelativeLayout>

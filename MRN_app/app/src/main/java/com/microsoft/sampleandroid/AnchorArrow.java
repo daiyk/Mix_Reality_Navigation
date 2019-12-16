@@ -119,7 +119,6 @@ public class AnchorArrow extends TransformableNode {
                         destinationAnchor.setLocalPosition(new Vector3(0.f,0.5f,0.f));
                         destinationAnchor.getScaleController().setMaxScale(0.052f);
                         destinationAnchor.getScaleController().setMinScale(0.05f);
-                        destinationAnchor.select();
                     })
                     .exceptionally(
                             throwable -> {

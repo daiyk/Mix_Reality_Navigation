@@ -70,7 +70,7 @@ public final class FileManager {
             Log.e(TAG,"No authority to wirte file to the device!");
             return;
         }
-        MapFile = new File(MapFolder,mapName+fileId+".xml");
+        MapFile = new File(MapFolder,mapName + ".xml");
         try {
             //extract map information and save them separate for xml write
             ArrayList<ArrayList<Integer>> adj_list = map.getAdjList();

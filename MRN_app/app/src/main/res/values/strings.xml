@@ -14,4 +14,17 @@
     <string name="back_button_text">Back</string>
     <string name="create_button_text">Create</string>
     <string name="locate_button_text">Locate</string>
+    <string name="connect_button_text">Submit</string>
+    <string name="main_node_text">Main Node</string>
+    <string name="aux_node_text">Auxiliary Node</string>
+    <string name="type_button_text">Submit</string>
+    <string name="manual_button_text">Manually Connect</string>
+    <string name="branch_button_text">New Branch</string>
+    <string name="finish_button_text">Finish mapping</string>
+    <string name="submit_button_text">Submit</string>
+    <string name="navigate_button_text">Navigation</string>
+
+
+
+
 </resources>

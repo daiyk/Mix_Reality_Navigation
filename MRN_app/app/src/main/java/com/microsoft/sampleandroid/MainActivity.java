@@ -29,9 +29,4 @@ public class MainActivity extends Activity {
         startActivity(intent);
     }
 
-    public void onSharedDemoClick(View v)
-    {
-        Intent intent = new Intent(this, SharedActivity.class);
-        startActivity(intent);
-    }
 }
