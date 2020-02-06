@@ -70,7 +70,7 @@ public final class FileManager {
             Log.e(TAG,"No authority to wirte file to the device!");
             return;
         }
-        MapFile = new File(MapFolder,mapName+fileId+".xml");
+        MapFile = new File(MapFolder,mapName + ".xml");
         try {
             //extract map information and save them separate for xml write
             ArrayList<ArrayList<Integer>> adj_list = map.getAdjList();
@@ -340,143 +340,20 @@ public final class FileManager {
     /*
      * Checks if external storage is available for read and write
      */
-     private boolean isExternalStorageWritable(){
+    private boolean isExternalStorageWritable(){
 
-         String state = Environment.getExternalStorageState();
-         return Environment.MEDIA_MOUNTED.equals(state);
-     }
+        String state = Environment.getExternalStorageState();
+        return Environment.MEDIA_MOUNTED.equals(state);
+    }
 
-     /* Checks if external storage is available to at least read */
-     public boolean isExternalStorageReadable() {
-         String state = Environment.getExternalStorageState();
-         if (Environment.MEDIA_MOUNTED.equals(state) ||
-                 Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
-             return true;
-         }
-         return false;
-     }
+    /* Checks if external storage is available to at least read */
+    public boolean isExternalStorageReadable() {
+        String state = Environment.getExternalStorageState();
+        if (Environment.MEDIA_MOUNTED.equals(state) ||
+                Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
+            return true;
+        }
+        return false;
+    }
 
 }
-
-
-
-//    //**Loop over transf and Write to XML */
-//    Element transf_vec = document.createElement("Transformation");
-//            root.appendChild(transf_vec);
-//                    for (Map.Entry<String, Vector3> entry : transfVec.entrySet()) {
-//        Element pair = document.createElement("pair");
-//        Attr key = document.createAttribute("key");
-//        key.setValue(entry.getKey());
-//        pair.setAttributeNode(key);
-//
-//        Element x = document.createElement("x");
-//        x.appendChild(document.createTextNode(String.valueOf(entry.getValue().x)));
-//        pair.appendChild(x);
-//
-//        Element y = document.createElement("y");
-//        y.appendChild(document.createTextNode(String.valueOf(entry.getValue().y)));
-//        pair.appendChild(y);
-//
-//        Element z = document.createElement("z");
-//        z.appendChild(document.createTextNode(String.valueOf(entry.getValue().z)));
-//        pair.appendChild(z);
-//
-//        transf_vec.appendChild(pair);
-//
-//        }
-
-    //loop to read transformation vectors
-//    Node transformation = root.getElementsByTagName("Transformation").item(0);
-//            if(graph.getNodeType() == Node.ELEMENT_NODE)
-//                    {
-//                    Element eTransfVec = (Element)transformation;
-//                    NodeList transfVec = eTransfVec.getElementsByTagName("pair");
-//                    for(int item = 0; item<transfVec.getLength();item++)
-//        {
-//        Node pair = transfVec.item(item);
-//        if(pair.getNodeType()==Node.ELEMENT_NODE)
-//        {
-//        Element eVec = (Element)pair;
-//        String key = eVec.getAttribute("key");
-//
-//        //find the corresponding start node and end node in the key
-//        String key1=new String();
-//        String key2=new String();
-//        String tempKey="";
-//        for(int i = 0; i < key.length(); i++)
-//        {
-//        if(String.valueOf(key.charAt(i)).equals("_"))
-//        {
-//        key1 = tempKey;
-//        tempKey="";
-//        }
-//        else if(key.endsWith(String.valueOf(key.charAt(i))))
-//        {
-//        tempKey = tempKey+key.charAt(i);
-//        key2 = tempKey;
-//        break;
-//        }
-//        else
-//        tempKey = tempKey+key.charAt(i);
-//        }
-//        //loop over x,y,z
-//        Node node_x = eVec.getElementsByTagName("x").item(0);
-//        Float x = Float.valueOf(node_x.getTextContent());
-//
-//        Node node_y = eVec.getElementsByTagName("y").item(0);
-//        Float y = Float.valueOf(node_y.getTextContent());
-//
-//        Node node_z = eVec.getElementsByTagName("z").item(0);
-//        Float z = Float.valueOf(node_z.getTextContent());
-//
-//        Vector3 vec = new Vector3(x,y,z);
-//
-//        map.updateTransf(Integer.parseInt(key1), Integer.parseInt(key2), vec);
-//        }
-//        }
-//        }
-
-//**Loop over NodeID pairs and Write to XML */
-//            Element hashPair = document.createElement("HashPair");
-//            root.appendChild(hashPair);
-//            for (Map.Entry<String, Integer> entry : nodeIdPair.entrySet()) {
-//                Element pair = document.createElement("pair");
-//                Attr key = document.createAttribute("key");
-//                key.setValue(entry.getKey());
-//                pair.setAttributeNode(key);
-//                pair.appendChild(document.createTextNode(String.valueOf(entry.getValue())));
-//
-//                hashPair.appendChild(pair);
-//
-//            }
-
-//    public void writeNewPose(long currTime, float[] camTrans, float[] camRot){
-//
-//        String str_line = String.format("%1$07d %2$13f %3$13f %4$13f %5$13f %6$13f %7$13f %8$13f",
-//                currTime, camTrans[0], camTrans[1], camTrans[2], camRot[0], camRot[1], camRot[2],
-//                camRot[3]);
-//        poseTextFile += str_line + "\n";
-//    }
-
-// public String savePose() {
-//     if (isExternalStorageWritable()) {
-//         try {
-//             myOutputStreamWriter.write(poseTextFile);
-//             myOutputStreamWriter.close();
-//             myFileOutputStream.flush();
-//             myFileOutputStream.close();
-//             return "file saved";
-//         } catch (FileNotFoundException e) {
-//             e.printStackTrace();
-//             return "File not found";
-//         } catch (IOException e) {
-//             e.printStackTrace();
-//             return "Error saving";
-//         } catch (Throwable t) {
-//             return "Exception: " + t.toString();
-//         }
-//     } else {
-//         Log.e(TAG, "External storage not available to store data!!");
-//     }
-//     return "Error in FileManager.savePose()";
-// }

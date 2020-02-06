@@ -1,11 +1,11 @@
 <resources>
-    <string name="app_name">Sample Java Android</string>
+    <string name="app_name">Mixed Reality Navigation</string>
     <string name="title_activity_aractive">ARActive</string>
-    <string name="main_title_text">Select a Spatial Anchors Demo</string>
+    <string name="main_title_text">Mixed Reality Navigation</string>
     <string name="main_basic_button_text">Build Map</string>
-    <string name="main_basic_details_text">Create and locate and anchor.</string>
+    <string name="main_basic_details_text">Drop anchors and save map.</string>
     <string name="main_nearby_button_text">Navigation</string>
-    <string name="main_nearby_details_text">Create 3 anchors and locate the last. Then, find the other 2 anchors using a query for nearby anchors.</string>
+    <string name="main_nearby_details_text">Load map and show navigation.</string>
     <string name="main_shared_button_text">Shared</string>
     <string name="main_shared_details_text">Create and locate anchors between multiple devices.</string>
     <string name="shared_title_text">Welcome to the Azure Spatial Anchors Shared Anchors Demo\nChoose Create or Locate</string>
@@ -14,4 +14,17 @@
     <string name="back_button_text">Back</string>
     <string name="create_button_text">Create</string>
     <string name="locate_button_text">Locate</string>
+    <string name="connect_button_text">Submit</string>
+    <string name="main_node_text">Main Node</string>
+    <string name="aux_node_text">Auxiliary Node</string>
+    <string name="type_button_text">Submit</string>
+    <string name="manual_button_text">Manually Connect</string>
+    <string name="branch_button_text">New Branch</string>
+    <string name="finish_button_text">Finish mapping</string>
+    <string name="submit_button_text">Submit</string>
+    <string name="navigate_button_text">Navigation</string>
+
+
+
+
 </resources>

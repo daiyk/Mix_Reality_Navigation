@@ -11,34 +11,35 @@ import androidx.appcompat.app.AppCompatActivity;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
+import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.ar.core.Anchor;
-import com.google.ar.core.Camera;
 import com.google.ar.core.HitResult;
 import com.google.ar.core.Plane;
 import com.google.ar.core.Pose;
+import com.google.ar.sceneform.AnchorNode;
 import com.google.ar.sceneform.ArSceneView;
-import com.google.ar.sceneform.HitTestResult;
 import com.google.ar.sceneform.Node;
 import com.google.ar.sceneform.Scene;
+import com.google.ar.sceneform.math.Quaternion;
 import com.google.ar.sceneform.math.Vector3;
 import com.google.ar.sceneform.rendering.Color;
 import com.google.ar.sceneform.rendering.Material;
 import com.google.ar.sceneform.rendering.MaterialFactory;
-import com.google.ar.sceneform.rendering.ViewRenderable;
+import com.google.ar.sceneform.rendering.ModelRenderable;
+import com.google.ar.sceneform.rendering.ShapeFactory;
 import com.google.ar.sceneform.ux.ArFragment;
 
-import com.google.ar.sceneform.ux.TransformableNode;
-import com.microsoft.azure.spatialanchors.AnchorLocateCriteria;
-import com.microsoft.azure.spatialanchors.AnchorLocatedEvent;
 import com.microsoft.azure.spatialanchors.CloudSpatialAnchor;
 import com.microsoft.azure.spatialanchors.CloudSpatialException;
-import com.microsoft.azure.spatialanchors.LocateAnchorStatus;
-import com.microsoft.azure.spatialanchors.LocateAnchorsCompletedEvent;
-import com.microsoft.azure.spatialanchors.NearAnchorCriteria;
 import com.microsoft.azure.spatialanchors.SessionUpdatedEvent;
 
 import java.text.DecimalFormat;
@@ -46,31 +47,23 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
-
-import javax.vecmath.Vector3d;
 
 public class MapBuildingActivity extends AppCompatActivity
 {
     private static final int MY_PERMISSIONS_REQUEST_READ_CONTACTS = 100;
-    private String anchorID;
+    private String anchorID = null;
+    private String prev_anchorID;
+    private LinkedHashMap<String, String> anchorID_NamePairs = new LinkedHashMap<>();
+
     private final ConcurrentHashMap<String, AnchorVisual> anchorVisuals = new ConcurrentHashMap<>();
     private boolean basicDemo = true;
     private AzureSpatialAnchorsManager cloudAnchorManager;
     private DemoStep currentDemoStep = DemoStep.Start;
     private boolean enoughDataForSaving;
-    //change this later
-    private static final int numberOfNearbyAnchors = 3;
 
     private final Object progressLock = new Object();
     private final Object renderLock = new Object();
-    private int saveCount = 0;
-    private int anchorFound = 0;
-    private boolean finish = false;
-    private Vector3 lastAnchorPos = new Vector3();
-    private Pose lastAnchorPose;
 
     // Materials
     private static Material failedColor;
@@ -86,12 +79,32 @@ public class MapBuildingActivity extends AppCompatActivity
     private ArSceneView sceneView;
     private TextView statusText;
 
-    private Button finishButton;
+    private Pose current_anchorPose;
     private AnchorMap anchorMap;
-    private List<String> AnchorNames = new ArrayList<String>();
+    private ArrayList<String> AnchorNames = new ArrayList<String>();
+    private ArrayList<String> AnchorNames_major = new ArrayList<String>();
+    private String prev_anchorName = null;
+    private String curr_anchorName= null;
+    private boolean spinner_selected = false;
 
-    private String targetName = null;
-
+    private EditText nameInput;
+    private Button finishButton;
+    private Button submitButton;
+    private Button newBranchButton;
+    private Button manualButton;
+    private LinearLayout mylinearLayout;
+    private LinearLayout mylinearLayout_buttons;
+    private String anchorName;
+    private Spinner spinner_branch;
+    private RadioGroup radioGroup;
+    private RadioButton radioButton;
+    private Button typeButton;
+    private NodeType nodeType;
+    private LinearLayout linearLayout_manual;
+    private Spinner spinner_manual1;
+    private Spinner spinner_manual2;
+    private Button connectsubmitButton;
+    private Button presave_button;
 
     private final LinkedHashMap<String,String> anchorNamesIdentifier = new LinkedHashMap<>();
     public void exitDemoClicked(View v) {
@@ -129,12 +142,34 @@ public class MapBuildingActivity extends AppCompatActivity
         actionButton = findViewById(R.id.actionButton);
         actionButton.setOnClickListener((View v) -> advanceDemo());
 
+        mylinearLayout_buttons = findViewById(R.id.linearLayout_buttons);
         finishButton = findViewById(R.id.finishButton);
-        finishButton.setOnClickListener((View v) -> onClick());
+        finishButton.setOnClickListener((View v) -> onClick_finish());
+        newBranchButton = findViewById(R.id.newBranchButton);
+        newBranchButton.setOnClickListener((View v) -> onClick_branch());
+        spinner_branch = findViewById(R.id.spinner_branch);
+
+        radioGroup = findViewById(R.id.radioGroup);
+        typeButton = findViewById(R.id.typeButton);
+        typeButton.setOnClickListener((View v) -> onClick_type());
+
+        nameInput = findViewById(R.id.editText);
+        submitButton = findViewById(R.id.submitButton);
+        mylinearLayout = findViewById(R.id.linearLayout_input);
+        submitButton.setOnClickListener((View v) -> onClick_submit());
+        manualButton = findViewById(R.id.manualButton);
+        manualButton.setOnClickListener((View v) -> onClick_connect());
+
+        linearLayout_manual = findViewById(R.id.linearLayout_manual);
+        connectsubmitButton = findViewById(R.id.connect_submit);
+        spinner_manual1 = findViewById(R.id.spinner_manual1);
+        spinner_manual2 = findViewById(R.id.spinner_manual2);
+        connectsubmitButton.setOnClickListener((View v) -> onClick_submitconnection());
+
+        presave_button = findViewById(R.id.presave_button);
+        presave_button.setOnClickListener((View v) -> onClick_presave());
 
         anchorMap = new AnchorMap();
-
-
 
         MaterialFactory.makeOpaqueWithColor(this, new Color(android.graphics.Color.RED))
                 .thenAccept(material -> failedColor = material);
@@ -173,7 +208,6 @@ public class MapBuildingActivity extends AppCompatActivity
         if (AzureSpatialAnchorsManager.SpatialAnchorsAccountId.equals("Set me") || AzureSpatialAnchorsManager.SpatialAnchorsAccountKey.equals("Set me")) {
             Toast.makeText(this, "\"Set SpatialAnchorsAccountId and SpatialAnchorsAccountKey in AzureSpatialAnchorsManager.java\"", Toast.LENGTH_LONG)
                     .show();
-
             finish();
         }
 
@@ -208,7 +242,6 @@ public class MapBuildingActivity extends AppCompatActivity
                             if (t instanceof CloudSpatialException) {
                                 exceptionMessage = (((CloudSpatialException) t).getErrorCode().toString());
                             }
-
                             anchorSaveFailed(exceptionMessage);
                             return null;
                         });
@@ -222,16 +255,15 @@ public class MapBuildingActivity extends AppCompatActivity
                     });
                     currentDemoStep = DemoStep.SavingCloudAnchor;
                 }
-
                 break;
 
             case CreateAnotherLocalAnchor:
                 runOnUiThread(() -> {
                     statusText.setText("Tap a surface to create next anchor");
                     actionButton.setVisibility(View.INVISIBLE);
+                    mylinearLayout_buttons.setVisibility(View.INVISIBLE);
                 });
                 currentDemoStep = DemoStep.CreateLocalAnchor;
-
                 break;
 
             case SaveMap:
@@ -253,7 +285,7 @@ public class MapBuildingActivity extends AppCompatActivity
 
                 } else {
                     FileManager file = new FileManager();
-                    file.saveMap("test",anchorMap);
+                    file.saveMap("Map",anchorMap);
                     currentDemoStep = DemoStep.End;
                     Toast.makeText(this, "save map",Toast.LENGTH_LONG).show();
                     // Permission has already been granted
@@ -262,23 +294,20 @@ public class MapBuildingActivity extends AppCompatActivity
                         backButton.setVisibility(View.VISIBLE);
                     });
                 }
-                break;
 
             case End:
-                for (AnchorVisual toDeleteVisual : anchorVisuals.values()) {
-                    cloudAnchorManager.deleteAnchorAsync(toDeleteVisual.getCloudAnchor());
-                }
+
                 //set arrow invisible
                 destroySession();
 
                 runOnUiThread(() -> {
                     actionButton.setText("Restart");
+                    actionButton.setVisibility(View.VISIBLE);
                     statusText.setText("");
                     backButton.setVisibility(View.VISIBLE);
                 });
 
                 currentDemoStep = DemoStep.Restart;
-
                 break;
 
             case Restart:
@@ -289,39 +318,25 @@ public class MapBuildingActivity extends AppCompatActivity
 
     //当saveCloudAnchor步骤成功时调用，重置createLocalAnchor或者开始新的query步骤
     private void anchorSaveSuccess(CloudSpatialAnchor result) {
-        saveCount++;
 
-        anchorID = result.getIdentifier();
         Log.d("ASADemo:", "created anchor: " + anchorID);
-
         AnchorVisual visual = anchorVisuals.get("");
+        current_anchorPose = visual.getLocalAnchor().getPose();
+        anchorID = result.getIdentifier();
 
-        Pose pose_visual = visual.getLocalAnchor().getPose();
-//        Pose inv_pose_viusal = pose_visual.inverse();
-//        float[] inv_rotationMatrix_coord1 = new float[16];
-//        inv_pose_viusal.toMatrix(inv_rotationMatrix_coord1,0);
-//        anchorMap.addMatrix(anchorname, inv_rotationMatrix_coord1);
-
+        runOnUiThread(() -> {
+            statusText.setText("Select the NodeType");
+            //Here we can click Submit button
+            radioGroup.setVisibility(View.VISIBLE);
+            actionButton.setVisibility(View.INVISIBLE);
+        });
         //pos of the last anchor, which is used to compute transformation
-        AnchorNames.add(String.format("Anchor %d", saveCount - 1));
-        addToMap(AnchorNames ,anchorID, NodeType.Major);
-        lastAnchorPos = visual.getAnchorNode().getWorldPosition();
-        lastAnchorPose = visual.getLocalAnchor().getPose();
 
         //储存完毕并且把临时anchor删除
         visual.setColor(savedColor);
         anchorVisuals.put(anchorID, visual);
         anchorVisuals.remove("");
 
-        runOnUiThread(() -> {
-            statusText.setText("");
-            finishButton.setVisibility(View.VISIBLE);
-            //actionButton.setVisibility(View.VISIBLE);
-        });
-
-        // Need to create more anchors for nearby demo
-        currentDemoStep = DemoStep.CreateAnotherLocalAnchor;
-        advanceDemo();
     }
 
     private void anchorSaveFailed(String message) {
@@ -334,7 +349,6 @@ public class MapBuildingActivity extends AppCompatActivity
         for (AnchorVisual visual : anchorVisuals.values()) {
             visual.destroy();
         }
-
         anchorVisuals.clear();
     }
 
@@ -355,7 +369,6 @@ public class MapBuildingActivity extends AppCompatActivity
                 statusText.setText("Move around the anchor");
             }
         });
-
         currentDemoStep = DemoStep.SaveCloudAnchor;
 
         return visual.getLocalAnchor();
@@ -368,6 +381,7 @@ public class MapBuildingActivity extends AppCompatActivity
         }
 
         clearVisuals();
+        anchorMap.destory();
     }
 
     // 当criteria定义的寻找目标全部完成时调用，不然一直调用onAnchorLocated（）
@@ -417,7 +431,6 @@ public class MapBuildingActivity extends AppCompatActivity
     }
 
     private void startDemo() {
-        saveCount = 0;
         startNewSession();
         runOnUiThread(() -> {
             scanProgressText.setVisibility(View.GONE);
@@ -432,43 +445,200 @@ public class MapBuildingActivity extends AppCompatActivity
         destroySession();
 
         cloudAnchorManager = new AzureSpatialAnchorsManager(sceneView.getSession());
-//        cloudAnchorManager.addAnchorLocatedListener(this::onAnchorLocated);
-//        cloudAnchorManager.addLocateAnchorsCompletedListener(this::onLocateAnchorsCompleted);
         cloudAnchorManager.addSessionUpdatedListener(this::onSessionUpdated);
         cloudAnchorManager.start();
     }
 
-    private void stopWatcher() {
-        if (cloudAnchorManager != null) {
-            cloudAnchorManager.stopLocating();
+    private void onClick_branch(){
+        if(!spinner_selected){
+            runOnUiThread(() -> {
+                statusText.setText("Select a cross node from Spinner");
+                spinner_branch.setVisibility(View.VISIBLE);
+                newBranchButton.setText("CrossNode Selected");
+                newBranchButton.setVisibility(View.VISIBLE);
+                actionButton.setVisibility(View.INVISIBLE);
+                manualButton.setEnabled(false);
+                finishButton.setEnabled(false);
+            });
+            setupSpinner(AnchorNames_major, spinner_branch);
+            spinner_selected = true;
+        } else{
+            runOnUiThread(() -> {
+                statusText.setText("Click Continue Button to add a new Anchor");
+                spinner_branch.setVisibility(View.INVISIBLE);
+                newBranchButton.setText("New Branch");
+                actionButton.setVisibility(View.VISIBLE);
+                manualButton.setEnabled(true);
+                finishButton.setEnabled(true);
+            });
+            prev_anchorName = spinner_branch.getSelectedItem().toString();
+            spinner_selected = false;
         }
     }
 
-    private void onClick(){
-        finish = true;
-        finishButton.setVisibility(View.GONE);
-        // connect the first and last anchor
-
-        anchorMap.addEdge((String) AnchorNames.get(AnchorNames.size()-1),
-                (String) AnchorNames.get(0));
-
+    private void onClick_finish(){
+        runOnUiThread(() -> {
+            mylinearLayout_buttons.setVisibility(View.GONE);
+            actionButton.setVisibility(View.INVISIBLE);
+        });
         currentDemoStep = DemoStep.SaveMap;
         advanceDemo();
     }
 
-    private void addToMap(List AnchorNames, String AnchorID, NodeType AnchorType){
-        if (AnchorNames.size() == 1){
-            Pose pose_last = anchorVisuals.get("").getLocalAnchor().getPose();
-            anchorMap.addNode((String) AnchorNames.get(AnchorNames.size()-1), AnchorID, pose_last, AnchorType);
+    private void onClick_type(){
+
+        int radioId = radioGroup.getCheckedRadioButtonId();
+        radioButton = findViewById(radioId);
+        String node_type = (String)radioButton.getText();
+        if(node_type.equals("Main Node")){
+            nodeType = NodeType.Major;
+        }
+        if(node_type.equals("Auxiliary Node")){
+            nodeType = NodeType.Minor;
+        }
+        // Get start point anchor ID for "LookForAnchor"
+        runOnUiThread(() -> {
+            // Then give a name to the Node
+            mylinearLayout.setVisibility(View.VISIBLE);
+            radioGroup.setVisibility(View.INVISIBLE);
+            statusText.setText("Give a name for the new anchor");
+        });
+    }
+
+    private void onClick_submit(){
+        curr_anchorName = nameInput.getText().toString();
+        anchorID_NamePairs.put(curr_anchorName, anchorID);
+        if(AnchorNames.contains(curr_anchorName)){
+            statusText.setText("Names repeated, please submit a new Name");
         }
         else{
-            //"" is the current located anchor
-            Pose pose_last = anchorVisuals.get("").getLocalAnchor().getPose();
-            anchorMap.addNode((String) AnchorNames.get(AnchorNames.size()-1), AnchorID, pose_last,AnchorType);
-            anchorMap.addEdge((String) AnchorNames.get(AnchorNames.size()-1),
-                    (String) AnchorNames.get(AnchorNames.size()-2));
+            AnchorNames.add(curr_anchorName);
+            if(nodeType == NodeType.Major){
+                AnchorNames_major.add(curr_anchorName);
+            }
 
+            addToMap(curr_anchorName, prev_anchorName, anchorID, current_anchorPose, nodeType);
+
+            if( prev_anchorName != null)
+                addLineBetweenPoints(anchorVisuals.get(anchorID_NamePairs.get(curr_anchorName)).getAnchorNode(),
+                        anchorVisuals.get(anchorID_NamePairs.get(prev_anchorName)).getAnchorNode());
+            runOnUiThread(() -> {
+                mylinearLayout.setVisibility(View.GONE);
+                //Here we can choose if add new branch or finish or continue
+                mylinearLayout_buttons.setVisibility(View.VISIBLE);
+                actionButton.setVisibility(View.VISIBLE);
+                actionButton.setText("Continue");
+                statusText.setText("Continue mapping or start a new branch or finish mapping");
+            });
+            currentDemoStep = DemoStep.CreateAnotherLocalAnchor;
+
+            prev_anchorName = curr_anchorName;
+
+            //Set name for the rendered AnchorNode
+            anchorVisuals.get(anchorID).getAnchorNode().setName(curr_anchorName);
+            //Set AnchorBoard for the rendered AnchorNode
+            Vector3 localPos = new Vector3(0.0f, 0.5f * 0.55f, 0.0f);
+            AnchorBoard anchorBoard = new AnchorBoard(this, curr_anchorName, 0.5f, localPos);
+            anchorBoard.setParent(anchorVisuals.get(anchorID).getAnchorNode());
         }
+    }
+
+    private void onClick_connect(){
+        if(AnchorNames.size() == 1){
+            return;
+        }
+        setupSpinner(AnchorNames, spinner_manual1);
+        setupSpinner(AnchorNames, spinner_manual2);
+        runOnUiThread(() -> {
+            //Here we only enable two spinner and a submit button to manually connect two nodes
+            mylinearLayout.setVisibility(View.GONE);
+            mylinearLayout_buttons.setVisibility(View.GONE);
+            actionButton.setVisibility(View.GONE);
+            statusText.setText("Manually select two nodes to connect them");
+            linearLayout_manual.setVisibility(View.VISIBLE);
+        });
+    }
+
+    private void onClick_submitconnection(){
+        String selected_anchorName1 = spinner_manual1.getSelectedItem().toString();
+        String selected_anchorName2 = spinner_manual2.getSelectedItem().toString();
+        anchorMap.addEdge(selected_anchorName1, selected_anchorName2);
+        addLineBetweenPoints(anchorVisuals.get(anchorID_NamePairs.get(selected_anchorName1)).getAnchorNode(),
+                anchorVisuals.get(anchorID_NamePairs.get(selected_anchorName2)).getAnchorNode());
+        runOnUiThread(() -> {
+            //Here we only enable two spinner and a submit button to manually connect two nodes
+            mylinearLayout_buttons.setVisibility(View.VISIBLE);
+            actionButton.setVisibility(View.VISIBLE);
+            actionButton.setText("Continue");
+            statusText.setText("Manually select two nodes to connect them");
+            linearLayout_manual.setVisibility(View.GONE);
+        });
+    }
+
+    private void onClick_presave(){
+        FileManager file = new FileManager();
+        file.saveMap("Map",anchorMap);
+    }
+
+    private void addLineBetweenPoints(AnchorNode anchorNode, AnchorNode lastAnchorNode) {
+        if (lastAnchorNode != null) {
+            anchorNode.setParent(arFragment.getArSceneView().getScene());
+            Vector3 point1, point2;
+            point1 = lastAnchorNode.getWorldPosition();
+            point2 = anchorNode.getWorldPosition();
+
+    /*
+        First, find the vector extending between the two points and define a look rotation
+        in terms of this Vector.
+    */
+            final Vector3 difference = Vector3.subtract(point1, point2);
+            final Vector3 directionFromTopToBottom = difference.normalized();
+            final Quaternion rotationFromAToB =
+                    Quaternion.lookRotation(directionFromTopToBottom, Vector3.up());
+            MaterialFactory.makeOpaqueWithColor(getApplicationContext(), new Color(0, 255, 244))
+                    .thenAccept(
+                            material -> {
+                            /* Then, create a rectangular prism, using ShapeFactory.makeCube() and use the difference vector
+                                   to extend to the necessary length.  */
+                                ModelRenderable model = ShapeFactory.makeCube(
+                                        new Vector3(.01f, .01f, difference.length()),
+                                        Vector3.zero(), material);
+                            /* Last, set the world rotation of the node to the rotation calculated earlier and set the world position to
+                                   the midpoint between the given points . */
+                                Node node = new Node();
+                                node.setParent(anchorNode);
+                                node.setRenderable(model);
+                                node.setWorldPosition(Vector3.add(point1, point2).scaled(.5f));
+                                node.setWorldRotation(rotationFromAToB);
+                            }
+                    );
+            lastAnchorNode = anchorNode;
+        }
+    }
+
+    private void addToMap(String curr_AnchorName, String prev_anchorName, String AnchorID, Pose curr_pose, NodeType AnchorType){
+        if (prev_anchorName == null){
+            anchorMap.addNode(curr_AnchorName, AnchorID, curr_pose, AnchorType);
+        }
+        else{
+            anchorMap.addNode(curr_AnchorName, AnchorID, curr_pose, AnchorType);
+            anchorMap.addEdge(curr_AnchorName, prev_anchorName);
+        }
+    }
+
+    public void setupSpinner(ArrayList<String> anchorNames_major, Spinner spinner){
+        ArrayList<String> anchorlist = new ArrayList<String>();
+        int n = 0;
+        while(n<anchorNames_major.size()){
+            anchorlist.add(anchorNames_major.get(n));
+            n++;
+        }
+        ArrayAdapter<String> spinnerAdapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_spinner_item, anchorlist);
+        spinnerAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        spinner.setAdapter(spinnerAdapter);
+        spinnerAdapter.notifyDataSetChanged();
+
     }
 
     public void onRequestPermissionsResult(int requestCode,
@@ -508,6 +678,5 @@ public class MapBuildingActivity extends AppCompatActivity
     enum NodeType {             ///< classify nodes into 3 types
         Major,                  ///< node that represents important and meaningful location
         Minor,                  ///< node that used for tracking and accuracy improve.
-        Cross,                  ///< node where new graph branch is generated
     }
 }

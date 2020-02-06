@@ -51,7 +51,7 @@ public class AnchorArrow extends TransformableNode {
             Vector3 localPos,
             TransformationSystem arTransform,
             Scene scene
-        ){
+    ){
         super(arTransform);
         this.context = context;
         this.localPos = localPos;
@@ -77,7 +77,7 @@ public class AnchorArrow extends TransformableNode {
                 .thenAccept((renderable) -> {
                     this.setRenderable(renderable);
                     this.setLocalPosition(this.localPos);
-                    addHighlightToNode(this);
+                    //addHighlightToNode(this);
                     this.select();
                 })
                 .exceptionally(

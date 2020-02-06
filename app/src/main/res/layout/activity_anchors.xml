@@ -11,6 +11,8 @@
         android:layout_height="fill_parent"
         android:layout_gravity="top"/>
 
+
+
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
@@ -18,13 +20,14 @@
 
         <Button
             android:id="@+id/backButton"
+            style="@style/Widget.AppCompat.Button.Colored"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentStart="true"
             android:layout_alignParentTop="true"
+            android:onClick="exitDemoClicked"
             android:text="@string/back_button_text"
-            android:textAllCaps="false"
-            android:onClick = "exitDemoClicked"/>
+            android:textAllCaps="false" />
 
         <TextView
             android:id="@+id/statusText"
@@ -47,6 +50,7 @@
 
         <Button
             android:id="@+id/actionButton"
+            style="@style/Widget.AppCompat.Button.Colored"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_alignParentEnd="true"
@@ -84,12 +88,13 @@
 
         <Button
             android:id="@+id/navigate"
+            style="@android:style/Widget.Holo.Light.Button.Toggle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_above="@+id/statusText"
             android:layout_centerHorizontal="true"
             android:layout_marginBottom="100dp"
-            android:text="Navigate" />
+            android:text="@string/navigate_button_text" />
 
         <TextView
             android:id="@+id/anchor_Selected"
@@ -97,15 +102,15 @@
             android:layout_height="wrap_content"
             android:layout_below="@+id/radioGroup"
             android:layout_centerHorizontal="true"
-            android:layout_marginTop="25dp"
+            android:layout_marginTop="0dp"
             android:text="TextView" />
 
         <Spinner
             android:id="@+id/spinner"
+            style="@style/Widget.AppCompat.Spinner.Underlined"
+            android:layout_below="@+id/backButton"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_above="@+id/scanProgressText"
-            android:layout_marginBottom="537dp" />
+            android:layout_height="wrap_content" />
 
 
     </RelativeLayout>

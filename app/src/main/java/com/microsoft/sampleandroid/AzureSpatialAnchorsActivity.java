@@ -192,9 +192,9 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                     foundColor = material;
                 });
         MaterialFactory.makeOpaqueWithColor(this, new Color(ContextCompat.getColor(this, R.color.SeaGreen)))
-        .thenAccept(material -> {
+                .thenAccept(material -> {
                     targetColor=material;
-        });
+                });
         //set variable to pick real path from url
         pickit = new PickiT(this, this);
     }
