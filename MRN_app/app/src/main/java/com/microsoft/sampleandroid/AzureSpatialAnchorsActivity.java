@@ -158,7 +158,7 @@ public class AzureSpatialAnchorsActivity extends AppCompatActivity implements Pi
                             if(statusText.getVisibility()==statusText.INVISIBLE) {
                                 statusText.setVisibility(View.VISIBLE);
                             }
-                            statusText.setText(String.valueOf(distance));
+//                            statusText.setText(String.valueOf(distance));
 //                            statusText.setText(String.format("%f, %f, %f",targetPosition.x,targetPosition.y,targetPosition.z));
                             if (distance < NAVI_LIMIT ) {
                                 advanceDemo();
