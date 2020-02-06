@@ -1,3 +1,5 @@
-# Android Java Sample
+%# Android Java Sample
+# Mixed Reality Navigation 
 
-See our [quickstart guide](https://docs.microsoft.com/en-us/azure/spatial-anchors/quickstarts/get-started-android) for sample instructions.
+
+
