@@ -1,7 +1,7 @@
 # Mix Reality Navigation with Azure Spatial Anchor
-
+Created by @daiyk and @louzi233
 ## Intro
-This app is an android-based  Mix-Reality application that build graph-based map by placing anchors,  and  navigating  user  to  and  from  any  two  chosen anchors. Our application fully relies on the image recognition (SLAM) for anchor detection, where the anchor-relatedimages  are  stored  in  the  Azure  cloud  application  - Azure Spatial Anchor.
+This app is an android-based  Mix-Reality application that build graph-based map by placing anchors,  and  navigating  user  to  and  from  any  two  chosen anchors. Our application fully relies on the image recognition (SLAM) for anchor detection, where the anchor-related images  are  stored  in  the  Azure  cloud  application  - Azure Spatial Anchor.
 
 ## Environment
 Build environment:
