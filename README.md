@@ -20,9 +20,9 @@ Follow [this link](https://docs.microsoft.com/en-us/azure/spatial-anchors/quicks
 Complie the app and follow the instruction in the app.
 
 ## Demo Videos
-<a href="https://www.youtube.com/watch?v=D6yCB5i1jSs" target="_blank"><img src="http://img.youtube.com/vi/D6yCB5i1jSs/0.jpg" alt="Map Building" width="480" height="360" border="10" /></a>
-
 <a href="https://www.youtube.com/watch?v=rGzZLM_a3L0" target="_blank"><img src="http://img.youtube.com/vi/rGzZLM_a3L0/0.jpg" alt="Navigation" width="480" height="360" border="10" /></a>
+
+<a href="https://www.youtube.com/watch?v=D6yCB5i1jSs" target="_blank"><img src="http://img.youtube.com/vi/D6yCB5i1jSs/0.jpg" alt="Map Building" width="480" height="360" border="10" /></a>
 
 ## Authors ##
 * **[daiyk](https://github.com/daiyk)**
